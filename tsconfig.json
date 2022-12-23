@@ -16,6 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     // custom config
+    // "baseUrl": "src",
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,

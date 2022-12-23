@@ -2,6 +2,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import dts from "vite-plugin-dts";
+import viteTsconfigPaths from "vite-tsconfig-paths";
+import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -17,5 +19,10 @@ export default defineConfig({
       external: ["react", "react-dom"],
     },
   },
-  plugins: [react(), dts({ insertTypesEntry: true })],
+  plugins: [
+    react(),
+    viteTsconfigPaths(),
+    dts({ insertTypesEntry: true }),
+    visualizer({ emitFile: true, filename: "stats.html" }),
+  ],
 });

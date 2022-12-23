@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     sourcemap: true,
     lib: {
-      entry: "./src/index.tsx",
+      entry: "./src/lib/index.tsx",
       formats: ["es"],
       fileName: "route-f",
     },

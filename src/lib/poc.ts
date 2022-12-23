@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export {};
 
 type Route<Path extends string = any, Params = any> = {
@@ -5,20 +8,13 @@ type Route<Path extends string = any, Params = any> = {
   _params: Params;
 };
 
-type SubPath<
-  Path extends string,
-  Sub extends string,
-> = `${LeadingSlash<Path>}${LeadingSlash<Sub>}`;
+type SubPath<Path extends string, Sub extends string> = `${LeadingSlash<Path>}${LeadingSlash<Sub>}`;
 type PathOf<R extends Route> = R["_path"];
 
-type StripLeadingSlash<S extends string> = S extends `/${infer R}`
-  ? StripLeadingSlash<R>
-  : S;
+type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-const path = <Path extends string>(
-  path: Path,
-): Route<LeadingSlash<Path>, unknown> => {
+const path = <Path extends string>(path: Path): Route<LeadingSlash<Path>, unknown> => {
   return {} as any;
 };
 
@@ -65,12 +61,7 @@ type ConcatRoutes<Rs extends Route[]> = Rs extends [
   infer R2 extends Route,
   ...infer Rest extends Route[],
 ]
-  ? ConcatRoutes<
-      [
-        Route<SubPath<R["_path"], R2["_path"]>, R["_params"] & R2["_params"]>,
-        ...Rest,
-      ]
-    >
+  ? ConcatRoutes<[Route<SubPath<R["_path"], R2["_path"]>, R["_params"] & R2["_params"]>, ...Rest]>
   : Rs[0];
 
 const build = <Rs extends Route[]>(...from: Rs): ConcatRoutes<Rs> => {
@@ -79,23 +70,17 @@ const build = <Rs extends Route[]>(...from: Rs): ConcatRoutes<Rs> => {
 
 // type Meh = ConcatRoutePair<typeof Hi3Route, typeof Hi4Route>;
 
-const stringParam = <K extends string>(
-  key: K,
-): Route<`:${K}`, Record<K, string>> => {
+const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, string>> => {
   return {} as any;
 };
 
 const MessagesPath = build(path("base/messages"));
 const MessageDetailsPath = build(MessagesPath, stringParam("messageId"));
 
-const EditMessagePath = build(
-  MessageDetailsPath,
-  path("edit"),
-  stringParam("part"),
-);
+const EditMessagePath = build(MessageDetailsPath, path("edit"), stringParam("part"));
 
 const outparm: typeof EditMessagePath["_params"] = null as any;
-//@ts-expect-error
+//@ts-expect-error foo isn't real
 outparm.foo;
 const outpath: typeof EditMessagePath["_path"] = null as any;
 

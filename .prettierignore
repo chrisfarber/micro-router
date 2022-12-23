@@ -1,0 +1,15 @@
+# Add files here to ignore them from prettier formatting
+
+tmp
+
+# Generated files
+dist/*
+coverage/*
+node_modules/*
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

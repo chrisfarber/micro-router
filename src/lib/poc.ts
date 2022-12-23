@@ -95,6 +95,7 @@ const EditMessagePath = build(
 );
 
 const outparm: typeof EditMessagePath["_params"] = null as any;
+//@ts-expect-error
 outparm.foo;
 const outpath: typeof EditMessagePath["_path"] = null as any;
 

@@ -1,22 +1,19 @@
+import { RouterProvider } from "../lib";
+import { BrowserRouter } from "../lib/routers/browser";
 import "./App.css";
+
+const router = new BrowserRouter();
+router.observe();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(window as any).router = router;
 
 function App() {
   return (
-    <div className="App">
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button
-          onClick={() => {
-            console.log("hi");
-          }}
-        >
-          count is {0}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+    <RouterProvider router={router}>
+      <div className="App">
+        <h3>router testing</h3>
       </div>
-    </div>
+    </RouterProvider>
   );
 }
 

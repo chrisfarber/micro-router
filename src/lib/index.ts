@@ -5,3 +5,5 @@ export { BrowserHistory } from "./history/browser";
 export { MemoryHistory } from "./history/memory";
 export { Router } from "./router";
 export { useLocation } from "./hooks";
+
+export * as definition from "./definition";

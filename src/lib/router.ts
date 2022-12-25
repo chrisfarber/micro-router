@@ -38,7 +38,7 @@ export class Router {
   }
 
   private _observe(l: Location) {
-    this._location = Object.freeze(this.history.location);
+    this._location = Object.freeze(l);
     this.notify();
   }
 }

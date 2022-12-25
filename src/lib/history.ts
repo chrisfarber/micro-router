@@ -1,7 +1,7 @@
 export interface Location {
-  pathname: string;
-  hash: string;
-  search: string;
+  readonly pathname: string;
+  readonly hash: string;
+  readonly search: string;
   // unsure whether it makes sense to expose these:
   // host: string;
   // hostname: string;

@@ -29,12 +29,13 @@ export const text = <T extends string>(text: T): Route<T, Record<never, never>> 
       if (input.startsWith(text)) {
         return { error: false, params: {}, remaining: input.substring(text.length) };
       } else {
-        return { error: true };
+        return { error: true, description: `expected "${text}", found: "${input}"` };
       }
     },
   };
 };
 
+// TODO this regexp is broken
 const stringParamRegexp = /^([0-9A-Za-z_\\-]+)/;
 /** Matches the input text until one of the following characters are encountered: "/?#". Extracts
  * the value into the supplied params. */
@@ -70,7 +71,7 @@ type ConcatenatedRoutes<Rs extends Route[]> = Rs extends [
 export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs> => {
   const route: Route<any, any> = {
     _params: null as any,
-    path: routes.map(r => r.path).join() as any,
+    path: routes.map(r => r.path).join("") as any,
     match(input: string) {
       let remaining = input;
       let params: Record<string, any> = {};

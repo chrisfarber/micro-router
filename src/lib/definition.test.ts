@@ -1,27 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { concat, text, stringParam } from "./definition";
+import { concat, stringParam, text } from "./definition";
 
 describe("Route Definition", () => {
-  it("can construct a route?", () => {
-    const part = text("hello");
-    const nomatch = part.match("fooey");
-    expect(nomatch.error).to.be.true;
+  describe("text", () => {
+    it("matches strings", () => {
+      const part = text("hello");
+      const nomatch = part.match("fooey");
+      expect(nomatch.error).toBeTruthy();
 
-    const match = part.match("hellothere");
-    expect(match).toEqual({
-      error: false,
-      params: {},
-      remaining: "there",
-    });
-
-    const combined = concat(text("hello"), text("there"));
-    const woah = combined.match("hellotherefriend");
-    expect(woah).toEqual({
-      error: false,
-      params: {},
-      remaining: "friend",
+      const match = part.match("hellothere");
+      expect(match).toEqual({
+        error: false,
+        params: {},
+        remaining: "there",
+      });
     });
   });
+  describe("concat", () => {
+    const combined = concat(text("hello"), text("there"));
+    it("combines simple text", () => {
+      const result = combined.match("hellotherefriend");
+      expect(result).toEqual({
+        error: false,
+        params: {},
+        remaining: "friend",
+      });
+    });
+
+    it("reports the part that errored", () => {
+      expect(combined.match("other stuff")).toEqual({
+        error: true,
+        description: `expected "hello", found: "other stuff"`,
+      });
+      expect(combined.match("hellostuff")).toEqual({
+        error: true,
+        description: `expected "there", found: "stuff"`,
+      });
+    });
+
+    it("constructs a valid path at runtime", () => {
+      const combined = concat(text("stuff"), stringParam("foo"));
+      const path: typeof combined.path = "stuff:foo";
+      expect(combined.path).toEqual(path);
+    });
+  });
+  it("can construct simple routes", () => {});
 
   describe("stringParam", () => {
     it("parses text", () => {

@@ -1,17 +1,17 @@
 import { RouterProvider } from "../lib";
-import { BrowserRouter } from "../lib/routers/browser";
+import { BrowserHistory } from "../lib/history/browser";
 import "./App.css";
 
-const router = new BrowserRouter();
-router.observe();
+const history = new BrowserHistory();
+history.observe(loc => console.log("location changed", loc));
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).router = router;
+(window as any).hist = history;
 
 function App() {
   return (
-    <RouterProvider router={router}>
+    <RouterProvider router={history}>
       <div className="App">
-        <h3>router testing</h3>
+        <h3>...</h3>
       </div>
     </RouterProvider>
   );

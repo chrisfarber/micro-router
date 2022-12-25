@@ -14,6 +14,8 @@ describe("Route Definition", () => {
         params: {},
         remaining: "there",
       });
+
+      expect(part.make({})).toEqual("hello");
     });
   });
   describe("concat", () => {
@@ -25,6 +27,10 @@ describe("Route Definition", () => {
         params: {},
         remaining: "friend",
       });
+    });
+
+    it("makes a compound string", () => {
+      expect(combined.make({})).toEqual("hellothere");
     });
 
     it("reports the part that errored", () => {
@@ -68,8 +74,22 @@ describe("Route Definition", () => {
 
     it("does not read past a path separator", () => {
       const param = stringParam("finn");
-      expect(param.match("/nope")).toEqual({
-        error: true,
+      expect(param.match("/nope").error).toBeTruthy();
+    });
+  });
+
+  describe("a complex path", () => {
+    const path = concat(text("/hello/"), stringParam("person"), text("/from/"), stringParam("from"));
+    it("generates with params", () => {
+      expect(path.make({ from: "bob", person: "alice" })).toEqual("/hello/alice/from/bob");
+
+      expect(path.match("/hello/alice/from/bob")).toEqual({
+        error: false,
+        params: {
+          from: "bob",
+          person: "alice",
+        },
+        remaining: "",
       });
     });
   });

@@ -5,6 +5,7 @@ export interface Route<Path extends string = any, Params extends Record<never, n
   path: Path;
   _params: Params;
   match(input: string): MatchResult<Params>;
+  make(params: Params): string;
 }
 
 type ParamsOf<R extends Route> = R["_params"];
@@ -32,6 +33,9 @@ export const text = <T extends string>(text: T): Route<T, Record<never, never>> 
         return { error: true, description: `expected "${text}", found: "${input}"` };
       }
     },
+    make(params) {
+      return text;
+    },
   };
 };
 
@@ -48,6 +52,7 @@ export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, 
       if (!match) {
         return {
           error: true,
+          description: `expected to find string param ":${key}", found: "${input}"`,
         };
       }
       const [found] = match;
@@ -56,6 +61,9 @@ export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, 
         params: { [key]: found } as Record<K, string>,
         remaining: input.substring(found.length),
       };
+    },
+    make(params) {
+      return params[key];
     },
   };
 };
@@ -84,6 +92,9 @@ export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs
       }
       return { error: false, params, remaining };
     },
+    make(params) {
+      return routes.map(r => r.make(params)).join("");
+    },
   };
 
   return route as any;
@@ -94,3 +105,8 @@ export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs
 // type Wat2 = { [K in keyof Wat]: Wat[K] | null };
 
 // export const path = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs> => {};
+
+// const other = path("hello", "there", "stuff");
+// path(other, stringParam("stuff"));
+
+// ("/hello/there/stuff/:stuff");

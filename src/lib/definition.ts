@@ -100,13 +100,34 @@ export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs
   return route as any;
 };
 
+type RouteOrText = Route | string;
+type RouteOrTextToRoute<R extends RouteOrText> = R extends string ? Route<R, Record<never, never>> : R;
+type PathConcatenatedRoutes<Rs extends RouteOrText[]> = Rs extends [
+  infer R extends RouteOrText,
+  infer R2 extends RouteOrText,
+  ...infer Rest extends RouteOrText[],
+]
+  ? PathConcatenatedRoutes<
+      [
+        Route<
+          `${RouteOrTextToRoute<R>["path"]}${RouteOrTextToRoute<R2>["path"]}`,
+          RouteOrTextToRoute<R>["_params"] & RouteOrTextToRoute<R2>["_params"]
+        >,
+        ...Rest,
+      ]
+    >
+  : Rs[0];
+export const path = <Rs extends RouteOrText[]>(...routes: Rs): PathConcatenatedRoutes<Rs> => {
+  return null as any;
+};
+
 // const wat = [{ hi: "true" }, { hi: "false" }] as const;
 // type Wat = typeof wat;
 // type Wat2 = { [K in keyof Wat]: Wat[K] | null };
 
 // export const path = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs> => {};
 
-// const other = path("hello", "there", "stuff");
+const other = path("hello", "there", "stuff");
 // path(other, stringParam("stuff"));
 
 // ("/hello/there/stuff/:stuff");

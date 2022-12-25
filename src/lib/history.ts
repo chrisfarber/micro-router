@@ -11,6 +11,8 @@ export interface Location {
   // protocol: string;
 }
 
+/** The History interface abstracts away all necessary interface with the browser. It is **not**
+ * meant to be use directly. Instead, use the router. */
 export interface History {
   get location(): Location;
   /** Subscribe to location updates. Returns a cancel fn that can be invoked to stop observing. */

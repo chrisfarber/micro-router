@@ -2,10 +2,21 @@ import { History, Location } from "./history";
 
 type Listener = (l: Location) => void;
 type StopListening = () => void;
+
 export class Router {
   constructor(private history: History) {
-    history.observe(l => this._observe(l));
     this._location = Object.freeze(history.location);
+  }
+
+  private _stop: StopListening | null = null;
+  start() {
+    this.stop();
+    this._stop = this.history.observe(l => this._observe(l));
+  }
+
+  stop() {
+    this._stop?.();
+    this._stop = null;
   }
 
   private _location: Location;

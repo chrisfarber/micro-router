@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { RouterProvider } from "../lib";
 import { BrowserHistory } from "../lib/history/browser";
 import { useLocation } from "../lib/hooks";
@@ -14,13 +15,23 @@ const Where = () => {
 };
 
 function App() {
+  const [mounted, setMounted] = useState(true);
   return (
-    <RouterProvider history={history}>
-      <div className="App">
-        <h3>...</h3>
-        <Where />
+    <>
+      <div>
+        <button onClick={() => setMounted(v => !v)}>{mounted ? "Unmount router" : "Mount router"}</button>
       </div>
-    </RouterProvider>
+      {mounted && (
+        <RouterProvider history={history}>
+          <div className="App">
+            <h3>...</h3>
+            <Where />
+            <p>...</p>
+            <Where />
+          </div>
+        </RouterProvider>
+      )}
+    </>
   );
 }
 

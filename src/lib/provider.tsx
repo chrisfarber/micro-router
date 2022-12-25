@@ -1,4 +1,4 @@
-import { createContext, FC, PropsWithChildren, useContext, useMemo } from "react";
+import { createContext, FC, PropsWithChildren, useContext, useEffect, useMemo } from "react";
 import { History } from "./history";
 import { Router } from "./router";
 
@@ -14,5 +14,10 @@ export const useRouter = (): Router => {
 
 export const RouterProvider: FC<PropsWithChildren<{ history: History }>> = ({ history, children }) => {
   const router = useMemo(() => new Router(history), [history]);
+  console.log("made router", router);
+  useEffect(() => {
+    router.start();
+    return () => router.stop();
+  }, [router]);
   return <RouterContext.Provider value={router}>{children}</RouterContext.Provider>;
 };

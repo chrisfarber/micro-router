@@ -40,7 +40,9 @@ describe("Route Definition", () => {
 
     it("constructs a valid path at runtime", () => {
       const combined = concat(text("stuff"), stringParam("foo"));
+      // ensure the expected value matches the type:
       const path: typeof combined.path = "stuff:foo";
+      // ensure the runtime value matches the expected value:
       expect(combined.path).toEqual(path);
     });
   });
@@ -64,7 +66,7 @@ describe("Route Definition", () => {
       });
     });
 
-    it("errors", () => {
+    it("does not read past a path separator", () => {
       const param = stringParam("finn");
       expect(param.match("/nope")).toEqual({
         error: true,

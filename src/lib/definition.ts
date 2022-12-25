@@ -36,7 +36,7 @@ export const text = <T extends string>(text: T): Route<T, Record<never, never>> 
 };
 
 // TODO this regexp is broken
-const stringParamRegexp = /^([0-9A-Za-z_\\-]+)/;
+const stringParamRegexp = /^[0-9A-Za-z_\\-]+/;
 /** Matches the input text until one of the following characters are encountered: "/?#". Extracts
  * the value into the supplied params. */
 export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, string>> => {
@@ -54,8 +54,7 @@ export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, 
       return {
         error: false,
         params: { [key]: found } as Record<K, string>,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        remaining: input.substring(found!.length),
+        remaining: input.substring(found.length),
       };
     },
   };

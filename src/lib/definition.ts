@@ -1,27 +1,27 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-export interface Route<Path extends string = any, Params extends Record<never, never> = any> {
-  path: Path;
+export interface Path<Pathname extends string = any, Params extends Record<never, never> = any> {
+  path: Pathname;
   _params: Params;
   match(input: string): MatchResult<Params>;
   make(params: Params): string;
 }
 
-type ParamsOf<R extends Route> = R["_params"];
+type ParamsOf<R extends Path> = R["_params"];
 
 type MatchError = { error: true; description?: string };
 type MatchSuccess<P> = { error: false; params: P; remaining: string };
 type MatchResult<P> = MatchError | MatchSuccess<P>;
 
 type SubPath<Path extends string, Sub extends string> = `${LeadingSlash<Path>}${LeadingSlash<Sub>}`;
-type PathOf<R extends Route> = R["path"];
+type PathOf<R extends Path> = R["path"];
 
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-type TextRoute<P extends string> = Route<P, Record<never, never>>;
-export const text = <T extends string>(text: T): Route<T, Record<never, never>> => {
+type ConstPath<P extends string> = Path<P, Record<never, never>>;
+export const text = <T extends string>(text: T): ConstPath<T> => {
   return {
     _params: null as any,
     path: text,
@@ -49,7 +49,7 @@ export const text = <T extends string>(text: T): Route<T, Record<never, never>> 
 const stringParamRegexp = /^[0-9A-Za-z_\\-]+/;
 /** Matches the input text until one of the following characters are encountered: "/?#". Extracts
  * the value into the supplied params. */
-export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, string>> => {
+export const stringParam = <K extends string>(key: K): Path<`:${K}`, Record<K, string>> => {
   return {
     _params: null as any,
     path: `:${key}`,
@@ -74,18 +74,18 @@ export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, 
   };
 };
 
-type SegmentContaining<R extends Route> = R["path"] extends `${any}/${any}`
+type SegmentContaining<P extends Path> = P["path"] extends `${any}/${any}`
   ? never
-  : Route<`/${R["path"]}`, R["_params"]>;
-export const segment = <R extends Route>(
-  inner: R extends Route<`${any}/${any}`, any> ? never : R,
+  : Path<`/${P["path"]}`, P["_params"]>;
+export const segment = <R extends Path>(
+  inner: R extends Path<`${any}/${any}`, any> ? never : R,
 ): SegmentContaining<R> => {
   return undefined as any;
 };
 
-type SegmentedText<T extends string> = TextRoute<LeadingSlash<T>>;
+type SegmentedText<T extends string> = ConstPath<LeadingSlash<T>>;
 /**
- * Declare a Route that matches several
+ * Declare a Path that matches several
  * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
  * @returns
  */
@@ -100,21 +100,24 @@ export const segmentedText = <T extends string>(path: T): SegmentedText<T> => {
 
 const wat = segmentedText("hello/there");
 
-type ConcatenatedRoutes<Rs extends Route[]> = Rs extends [
-  infer R extends Route,
-  infer R2 extends Route,
-  ...infer Rest extends Route[],
+type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
+  infer P extends Path,
+  infer P2 extends Path,
+  ...infer Rest extends Path[],
 ]
-  ? ConcatenatedRoutes<[Route<`${R["path"]}${R2["path"]}`, R["_params"] & R2["_params"]>, ...Rest]>
-  : Rs[0];
-export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs> => {
-  const route: Route<any, any> = {
+  ? ConcatenatedPaths<[Path<`${P["path"]}${P2["path"]}`, P["_params"] & P2["_params"]>, ...Rest]>
+  : Ps[0];
+/**
+ * Combine two Path definitions with no separator.
+ */
+export const concat = <Rs extends Path[]>(...parts: Rs): ConcatenatedPaths<Rs> => {
+  const path: Path<any, any> = {
     _params: null as any,
-    path: routes.map(r => r.path).join("") as any,
+    path: parts.map(r => r.path).join("") as any,
     match(input: string) {
       let remaining = input;
       let params: Record<string, any> = {};
-      for (const r of routes) {
+      for (const r of parts) {
         const matched = r.match(remaining);
         if (matched.error) {
           return matched;
@@ -125,34 +128,34 @@ export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs
       return { error: false, params, remaining };
     },
     make(params) {
-      return routes.map(r => r.make(params)).join("");
+      return parts.map(r => r.make(params)).join("");
     },
   };
 
-  return route as any;
+  return path as any;
 };
 
-type RouteOrText = Route | string;
-type RouteOrTextToRoute<R extends RouteOrText> = R extends string ? TextRoute<LeadingSlash<R>> : R;
+type PathOrText = Path | string;
+type PathOrTextToPath<P extends PathOrText> = P extends string ? ConstPath<LeadingSlash<P>> : P;
 type NormParamsBeforeMerge<P> = P;
-type PathConcatenatedRoutes<Rs extends RouteOrText[]> = Rs extends [
-  infer R extends RouteOrText,
-  infer R2 extends RouteOrText,
-  ...infer Rest extends RouteOrText[],
+type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
+  infer P extends PathOrText,
+  infer P2 extends PathOrText,
+  ...infer Rest extends PathOrText[],
 ]
-  ? PathConcatenatedRoutes<
+  ? SegmentedPath<
       [
-        Route<
-          `${RouteOrTextToRoute<R>["path"]}${RouteOrTextToRoute<R2>["path"]}`,
-          NormParamsBeforeMerge<RouteOrTextToRoute<R>["_params"]> &
-            NormParamsBeforeMerge<RouteOrTextToRoute<R2>["_params"]>
+        Path<
+          `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
+          NormParamsBeforeMerge<PathOrTextToPath<P>["_params"]> &
+            NormParamsBeforeMerge<PathOrTextToPath<P2>["_params"]>
         >,
         ...Rest,
       ]
     >
-  : RouteOrTextToRoute<Rs[0]>;
+  : PathOrTextToPath<Ps[0]>;
 
-export const path = <Rs extends RouteOrText[]>(...routes: Rs): PathConcatenatedRoutes<Rs> => {
+export const path = <Rs extends PathOrText[]>(...paths: Rs): SegmentedPath<Rs> => {
   // TODO implement
   return undefined as any;
 };

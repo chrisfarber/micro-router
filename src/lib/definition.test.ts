@@ -116,7 +116,8 @@ describe("Route Definition", () => {
 
       const root = path("somewhere");
 
-      const Messages = path(root, "message");
+      const Messages = path(root, "subpath", "/message");
+
       const Message = path(Messages, segment(stringParam("messageId")));
 
       expect(uh).toBeDefined();

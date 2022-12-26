@@ -1,4 +1,4 @@
-export type { Route } from "./definition";
+export type { Path } from "./definition";
 export type { History as History } from "./history";
 export { RouterProvider } from "./provider";
 export { BrowserHistory } from "./history/browser";

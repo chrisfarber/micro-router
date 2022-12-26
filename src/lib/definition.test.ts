@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { concat, stringParam, text } from "./definition";
+import { concat, path, segment, stringParam, text } from "./definition";
 
 describe("Route Definition", () => {
   describe("text", () => {
@@ -78,7 +78,21 @@ describe("Route Definition", () => {
     });
   });
 
-  describe("a complex path", () => {
+  describe("pathSegment", () => {
+    it("doesn't allow for matching inner routes with slashes", () => {
+      // @ts-expect-error slashes not allowed in the middle
+      segment(text("he/llo"));
+      // @ts-expect-error slashes not allowed at beginning
+      segment(text("/llo"));
+      // @ts-expect-error slashes not allowed at end
+      segment(text("he/"));
+
+      const s = segment(text("this-works"));
+      expect(s).toBeDefined();
+    });
+  });
+
+  describe("a complex concat", () => {
     const path = concat(text("/hello/"), stringParam("person"), text("/from/"), stringParam("from"));
     it("generates with params", () => {
       expect(path.make({ from: "bob", person: "alice" })).toEqual("/hello/alice/from/bob");
@@ -91,6 +105,21 @@ describe("Route Definition", () => {
         },
         remaining: "",
       });
+    });
+  });
+
+  describe("path", () => {
+    it("defines successfully", () => {
+      const uh = path("l/hello");
+
+      const other = path(path("/a", "b"), "ce", "/d", segment(stringParam("e")));
+
+      const root = path("somewhere");
+
+      const Messages = path(root, "message");
+      const Message = path(Messages, segment(stringParam("messageId")));
+
+      expect(uh).toBeDefined();
     });
   });
 });

@@ -20,20 +20,26 @@ type PathOf<R extends Route> = R["path"];
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-// export const pathSegments = <Rs extends Route[]>(...segments: Rs): ConcatRoutes<Rs> => {};
-
+type TextRoute<P extends string> = Route<P, Record<never, never>>;
 export const text = <T extends string>(text: T): Route<T, Record<never, never>> => {
   return {
     _params: null as any,
     path: text,
     match(input) {
       if (input.startsWith(text)) {
-        return { error: false, params: {}, remaining: input.substring(text.length) };
+        return {
+          error: false,
+          params: {},
+          remaining: input.substring(text.length),
+        };
       } else {
-        return { error: true, description: `expected "${text}", found: "${input}"` };
+        return {
+          error: true,
+          description: `expected "${text}", found: "${input}"`,
+        };
       }
     },
-    make(params) {
+    make() {
       return text;
     },
   };
@@ -68,6 +74,32 @@ export const stringParam = <K extends string>(key: K): Route<`:${K}`, Record<K, 
   };
 };
 
+type SegmentContaining<R extends Route> = R["path"] extends `${any}/${any}`
+  ? never
+  : Route<`/${R["path"]}`, R["_params"]>;
+export const segment = <R extends Route>(
+  inner: R extends Route<`${any}/${any}`, any> ? never : R,
+): SegmentContaining<R> => {
+  return undefined as any;
+};
+
+type SegmentedText<T extends string> = TextRoute<LeadingSlash<T>>;
+/**
+ * Declare a Route that matches several
+ * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
+ * @returns
+ */
+export const segmentedText = <T extends string>(path: T): SegmentedText<T> => {
+  return text(
+    `/${path
+      .split("/")
+      .filter(part => part !== "")
+      .join("/")}`,
+  ) as any;
+};
+
+const wat = segmentedText("hello/there");
+
 type ConcatenatedRoutes<Rs extends Route[]> = Rs extends [
   infer R extends Route,
   infer R2 extends Route,
@@ -101,7 +133,8 @@ export const concat = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs
 };
 
 type RouteOrText = Route | string;
-type RouteOrTextToRoute<R extends RouteOrText> = R extends string ? Route<R, Record<never, never>> : R;
+type RouteOrTextToRoute<R extends RouteOrText> = R extends string ? TextRoute<LeadingSlash<R>> : R;
+type NormParamsBeforeMerge<P> = P;
 type PathConcatenatedRoutes<Rs extends RouteOrText[]> = Rs extends [
   infer R extends RouteOrText,
   infer R2 extends RouteOrText,
@@ -111,23 +144,15 @@ type PathConcatenatedRoutes<Rs extends RouteOrText[]> = Rs extends [
       [
         Route<
           `${RouteOrTextToRoute<R>["path"]}${RouteOrTextToRoute<R2>["path"]}`,
-          RouteOrTextToRoute<R>["_params"] & RouteOrTextToRoute<R2>["_params"]
+          NormParamsBeforeMerge<RouteOrTextToRoute<R>["_params"]> &
+            NormParamsBeforeMerge<RouteOrTextToRoute<R2>["_params"]>
         >,
         ...Rest,
       ]
     >
-  : Rs[0];
+  : RouteOrTextToRoute<Rs[0]>;
+
 export const path = <Rs extends RouteOrText[]>(...routes: Rs): PathConcatenatedRoutes<Rs> => {
-  return null as any;
+  // TODO implement
+  return undefined as any;
 };
-
-// const wat = [{ hi: "true" }, { hi: "false" }] as const;
-// type Wat = typeof wat;
-// type Wat2 = { [K in keyof Wat]: Wat[K] | null };
-
-// export const path = <Rs extends Route[]>(...routes: Rs): ConcatenatedRoutes<Rs> => {};
-
-const other = path("hello", "there", "stuff");
-// path(other, stringParam("stuff"));
-
-// ("/hello/there/stuff/:stuff");

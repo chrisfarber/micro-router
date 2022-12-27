@@ -114,6 +114,10 @@ describe("Route Definition", () => {
           "remaining": "/",
         }
       `);
+
+      expect(p.make({ price: 100 })).toEqual("/100");
+      expect(p.make({ price: 100.0 })).toEqual("/100");
+      expect(p.make({ price: 4.2 })).toEqual("/4.2");
     });
   });
 

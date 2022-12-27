@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export interface Path<Pathname extends string = any, Params extends Record<never, never> = any> {
   readonly path: Pathname;

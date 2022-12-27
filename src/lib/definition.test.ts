@@ -24,13 +24,13 @@ describe("Route Definition", () => {
 
       expect(lc.match("lowerCASE").error).toBeFalsy();
       expect(uc.match("lowerCASE").error).toBeFalsy();
-      expect(uc.match("UPPERCASE").error).toBeTruthy();
+      expect(uc.match("UPPERCASEuppercase").error).toBeTruthy();
     });
 
     it("can be made case sensitive", () => {
       const uc = text("LOWERCASE", { caseSensitive: true });
       expect(uc.match("LOWERCASE").error).toBeFalsy();
-      expect(uc.match("lowercase").error).toBeTruthy();
+      expect(uc.match("lowercaselowercase").error).toBeTruthy();
       expect(uc.match("UPPERCASE").error).toBeTruthy();
     });
   });
@@ -94,7 +94,7 @@ describe("Route Definition", () => {
     });
   });
 
-  describe("pathSegment", () => {
+  describe("segment", () => {
     it("doesn't allow for matching inner routes with slashes", () => {
       // @ts-expect-error slashes not allowed in the middle
       segment(text("he/llo"));
@@ -102,9 +102,61 @@ describe("Route Definition", () => {
       segment(text("/llo"));
       // @ts-expect-error slashes not allowed at end
       segment(text("he/"));
+    });
 
+    it("succeeds if the segment is entirely consumed by the inner path", () => {
       const s = segment(text("this-works"));
       expect(s).toBeDefined();
+      expect(s.match("this-works")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {},
+          "remaining": "",
+        }
+      `);
+
+      expect(s.match("this-works")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {},
+          "remaining": "",
+        }
+      `);
+      expect(s.match("this-work")).toMatchInlineSnapshot(`
+        {
+          "description": "expected \\"this-works\\", found: \\"this-work\\"",
+          "error": true,
+        }
+      `);
+      expect(s.match("/this-works")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {},
+          "remaining": "",
+        }
+      `);
+      expect(s.match("/this-works/")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {},
+          "remaining": "/",
+        }
+      `);
+      expect(s.match("/this-works-oops")).toMatchInlineSnapshot(`
+        {
+          "description": "segment text \\"this-works-oops\\" matched the inner path, but had unused input \\"-oops\\"",
+          "error": true,
+        }
+      `);
+
+      expect(s.match("/this-works/too")).toEqual({
+        error: false,
+        params: {},
+        remaining: "/too",
+      });
+
+      const description: typeof s["path"] = "/this-works";
+      expect(s.path).toEqual(description);
     });
   });
 

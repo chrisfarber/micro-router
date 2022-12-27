@@ -38,6 +38,9 @@ const matchTextCaseInsensitive = (text: string) => {
   };
 };
 
+/** A primitive that will succeed if the path being matched against starts with the provided `text`.
+ * Any additional text in the input string will not affect the match.
+ */
 export const text = <T extends string>(text: T, options?: TextOptions): ConstPath<T> => {
   const caseSensitive = options?.caseSensitive;
   const match = (caseSensitive ? matchTextCaseSensitive : matchTextCaseInsensitive)(text);
@@ -95,18 +98,46 @@ export const stringParam = <K extends string>(key: K): Path<`:${K}`, Record<K, s
   };
 };
 
-type SegmentContaining<P extends Path> = P["path"] extends `${any}/${any}`
-  ? never
-  : Path<`/${P["path"]}`, P["_params"]>;
-export const segment = <R extends Path>(
-  inner: R extends Path<`${any}/${any}`, any> ? never : R,
-): SegmentContaining<R> => {
-  return undefined as any;
+const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
+export const segment = <P extends Path>(
+  inner: P extends Path<`${any}/${any}`, any> ? never : P,
+): Path<`/${P["path"]}`, P["_params"]> => {
+  return {
+    _params: null as any,
+    path: `/${inner.path}` as any,
+    match(input) {
+      const res = input.match(segmentRegexp);
+      if (!res) {
+        return { error: true, description: `input did not appear to be a path segment: "${input}"` };
+      }
+      const [_, str, rest] = res;
+      if (str === undefined || rest === undefined) {
+        return { error: true, description: `segment regexp failed` };
+      }
+      const innerMatch = inner.match(str);
+      if (innerMatch.error) {
+        return innerMatch;
+      }
+      if (innerMatch.remaining !== "") {
+        return {
+          error: true,
+          description: `segment text "${str}" matched the inner path, but had unused input "${innerMatch.remaining}"`,
+        };
+      }
+      return { ...innerMatch, remaining: rest };
+    },
+    make(params) {
+      return `/${inner.make(params)}`;
+    },
+  };
 };
 
 type SegmentedText<T extends string> = ConstPath<LeadingSlash<T>>;
 /**
- * Declare a Path that matches several
+ * A path that matches on complete segments of the input text.
+ *
+ * This path will fail to match if there is any extra text at the end of the last matching path segment.
+ *
  * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
  * @returns
  */
@@ -118,8 +149,6 @@ export const segmentedText = <T extends string>(path: T): SegmentedText<T> => {
       .join("/")}`,
   ) as any;
 };
-
-const wat = segmentedText("hello/there");
 
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,

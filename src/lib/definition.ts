@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export interface Path<Pathname extends string = any, Params extends Record<never, never> = any> {
   readonly path: Pathname;
@@ -11,9 +12,12 @@ export interface Path<Pathname extends string = any, Params extends Record<never
 type ParamsOf<P extends Path> = P["_params"];
 type PathOf<P extends Path> = P["path"];
 
-type MatchError = { error: true; description?: string };
-type MatchSuccess<P> = { error: false; params: P; remaining: string };
+type MatchError = { readonly error: true; readonly description?: string };
+type MatchSuccess<P> = { readonly error: false; readonly params: P; readonly remaining: string };
 type MatchResult<P> = MatchError | MatchSuccess<P>;
+
+const makeError = (descr?: string): MatchError =>
+  descr ? { error: true, description: descr } : { error: true };
 
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
@@ -54,10 +58,7 @@ export const text = <T extends string>(text: T, options?: TextOptions): ConstPat
           remaining: input.substring(text.length),
         };
       } else {
-        return {
-          error: true,
-          description: `expected "${text}", found: "${input}"`,
-        };
+        return makeError(`expected "${text}", found: "${input}"`);
       }
     },
     make() {
@@ -77,7 +78,7 @@ export const parseString = <K extends string>(key: K): StringPath<K> => {
     path: `:${key}`,
     match(input) {
       if (input.length < 1) {
-        return { error: true, description: `parseString for :${key} expected a non-empty input` };
+        return makeError(`parseString for :${key} expected a non-empty input`);
       }
       return {
         error: false,
@@ -91,6 +92,41 @@ export const parseString = <K extends string>(key: K): StringPath<K> => {
   };
 };
 
+const numberRegexp = /^(\d*\.?\d+)(.*)$/;
+type NumberPath<K extends string> = Path<`:${K}`, Record<K, number>>;
+/**
+ * A path that succeeds if it can parse the beginning of the input as a base 10 number.
+ *
+ * Not greedy, unlike `parseString`. It is incompatible with leading slashes, however,
+ * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
+ */
+export const parseNumber = <K extends string>(key: K): NumberPath<K> => ({
+  _params: null as any,
+  path: `:${key}`,
+  match(input) {
+    const res = input.match(numberRegexp);
+    if (!res) {
+      return makeError(`input did not appear to be a number: "${input}"`);
+    }
+    const [_, nStr, rest] = res;
+    if (nStr === undefined || rest === undefined) {
+      return makeError("numberRegexp failed");
+    }
+    const num = Number(nStr);
+    if (isNaN(num)) {
+      return makeError(`parsed as NaN: "${nStr}"`);
+    }
+    return {
+      error: false,
+      params: { [key]: num } as Record<K, number>,
+      remaining: rest,
+    };
+  },
+  make(params) {
+    return `${params[key]}`;
+  },
+});
+
 type Segment<P extends Path> = Path<`/${P["path"]}`, P["_params"]>;
 const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
 export const segment = <P extends Path>(inner: P): Segment<P> => {
@@ -100,21 +136,20 @@ export const segment = <P extends Path>(inner: P): Segment<P> => {
     match(input) {
       const res = input.match(segmentRegexp);
       if (!res) {
-        return { error: true, description: `input did not appear to be a path segment: "${input}"` };
+        return makeError(`input did not appear to be a path segment: "${input}"`);
       }
       const [_, str, rest] = res;
       if (str === undefined || rest === undefined) {
-        return { error: true, description: `segment regexp failed` };
+        return makeError(`segment regexp failed`);
       }
       const innerMatch = inner.match(str);
       if (innerMatch.error) {
         return innerMatch;
       }
       if (innerMatch.remaining !== "") {
-        return {
-          error: true,
-          description: `segment text "${str}" matched the inner path, but had unused input "${innerMatch.remaining}"`,
-        };
+        return makeError(
+          `segment text "${str}" matched the inner path, but had unused input "${innerMatch.remaining}"`,
+        );
       }
       return { ...innerMatch, remaining: rest };
     },
@@ -124,10 +159,16 @@ export const segment = <P extends Path>(inner: P): Segment<P> => {
   };
 };
 
-/** A Path that, when matching, will consume the entire first path segment as a string and
+/**
+ * A Path that, when matching, will consume the entire first path segment as a string and
  * capture it as the key `key` of Params.
  */
 export const string = <K extends string>(key: K) => segment(parseString(key));
+/**
+ * A Path that will consume the entire first path segment and parse it as a number, capturing
+ * it as the key `key` of Params.
+ */
+export const number = <K extends string>(key: K) => segment(parseNumber(key));
 
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,

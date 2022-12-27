@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { concat, path, segment, string, text, textSegments } from "./definition";
+import { concat, number, path, segment, string, text, textSegments } from "./definition";
 
 describe("Route Definition", () => {
   describe("text", () => {
@@ -97,6 +97,21 @@ describe("Route Definition", () => {
             "finn": "yep",
           },
           "remaining": "/nope",
+        }
+      `);
+    });
+  });
+
+  describe("number", () => {
+    it("parses numbers", () => {
+      const p = number("price");
+      expect(p.match("/19.99/")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {
+            "price": 19.99,
+          },
+          "remaining": "/",
         }
       `);
     });

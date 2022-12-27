@@ -61,18 +61,18 @@ describe("Route Definition", () => {
     });
 
     it("constructs a valid path at runtime", () => {
-      const combined = concat(text("stuff"), parseString("foo"));
+      const combined = concat(text("stuff"), string("foo"));
       // ensure the expected value matches the type:
-      const path: typeof combined.path = "stuff:foo";
+      const path: typeof combined.path = "stuff/:foo";
       // ensure the runtime value matches the expected value:
       expect(combined.path).toEqual(path);
     });
   });
   it("can construct simple routes", () => {});
 
-  describe("stringParam", () => {
+  describe("string", () => {
     it("parses text", () => {
-      const param = parseString("bluey");
+      const param = string("bluey");
       const m1 = param.match("hello-there");
       expect(m1).toEqual({
         error: false,
@@ -89,21 +89,20 @@ describe("Route Definition", () => {
     });
 
     it("does not read past a path separator", () => {
-      const param = parseString("finn");
-      expect(param.match("/nope").error).toBeTruthy();
+      const param = string("finn");
+      expect(param.match("yep/nope")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {
+            "finn": "yep",
+          },
+          "remaining": "/nope",
+        }
+      `);
     });
   });
 
   describe("segment", () => {
-    it("doesn't allow for matching inner routes with slashes", () => {
-      // @ts-expect-error slashes not allowed in the middle
-      segment(text("he/llo"));
-      // @ts-expect-error slashes not allowed at beginning
-      segment(text("/llo"));
-      // @ts-expect-error slashes not allowed at end
-      segment(text("he/"));
-    });
-
     it("succeeds if the segment is entirely consumed by the inner path", () => {
       const s = segment(text("this-works"));
       expect(s).toBeDefined();

@@ -8,12 +8,12 @@ export interface Path<Pathname extends string = any, Params extends Record<never
   make(params: Params): string;
 }
 
-type ParamsOf<P extends Path> = P["_params"];
-type PathOf<P extends Path> = P["path"];
+export type ParamsOf<P extends Path> = P["_params"];
+export type PathOf<P extends Path> = P["path"];
 
-type MatchError = { readonly error: true; readonly description?: string };
-type MatchSuccess<P> = { readonly error: false; readonly params: P; readonly remaining: string };
-type MatchResult<P> = MatchError | MatchSuccess<P>;
+export type MatchError = { readonly error: true; readonly description?: string };
+export type MatchSuccess<P> = { readonly error: false; readonly params: P; readonly remaining: string };
+export type MatchResult<P> = MatchError | MatchSuccess<P>;
 
 const makeError = (descr?: string): MatchError =>
   descr ? { error: true, description: descr } : { error: true };
@@ -35,12 +35,11 @@ const matchTextCaseSensitive =
 
 const matchTextCaseInsensitive = (text: string) => {
   const toMatch = text.toLocaleLowerCase();
-  return (input: string): boolean => {
-    return input.substring(0, toMatch.length).toLocaleLowerCase() === toMatch;
-  };
+  return (input: string): boolean => input.substring(0, toMatch.length).toLocaleLowerCase() === toMatch;
 };
 
-/** A primitive that will succeed if the path being matched against starts with the provided `text`.
+/**
+ * A primitive that will succeed if the path being matched against starts with the provided `text`.
  * Any additional text in the input string will not affect the match.
  */
 export const text = <T extends string>(text: T, options?: TextOptions): ConstPath<T> => {
@@ -128,6 +127,13 @@ export const parseNumber = <K extends string>(key: K): NumberPath<K> => ({
 
 type Segment<P extends Path> = Path<`/${P["path"]}`, P["_params"]>;
 const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
+/**
+ * A segment considers the contents between the start of the string (ignoring any initial path
+ * separator) and the first encountered path separator ("/").
+ *
+ * The resulting Path will fail if the inner path does not consume the entire first path segment, or
+ * if the first path segment is empty. Otherwise, it succeeds if the inner Path succeeds.
+ */
 export const segment = <P extends Path>(inner: P): Segment<P> => {
   return {
     _params: null as any,
@@ -178,6 +184,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   : Ps[0];
 /**
  * Combine two Path definitions with no separator.
+ * Succeeds if all inner Paths succeed.
  * You probably want to use `path` instead.
  */
 export const concat = <Rs extends Path[]>(...parts: Rs): ConcatenatedPaths<Rs> => {

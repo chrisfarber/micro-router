@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { concat, path, segment, parseString, text, textSegments, string } from "./definition";
+import { concat, path, segment, string, text, textSegments } from "./definition";
 
 describe("Route Definition", () => {
   describe("text", () => {
@@ -195,19 +195,31 @@ describe("Route Definition", () => {
   });
 
   describe("path", () => {
-    it.skip("defines successfully", () => {
+    it("defines successfully", () => {
       const blank = path();
-      const uh = path("l/hello");
+      expect(blank).toBeUndefined();
 
-      const other = path(path("/a", "b"), "c/d", "/e", string("f"));
+      const notBlank = path("l/hello");
+      expect(notBlank).toBeDefined();
+    });
 
-      const root = path("somewhere");
+    it("matches and generates on a complex example", () => {
+      const p = path(path("a", "/b", string("c")), "d/e", string("f"));
+      const descr: typeof p["path"] = "/a/b/:c/d/e/:f";
+      expect(p.path).toEqual(descr);
 
-      const Messages = path(root, "subpath", "/message");
-
-      const Message = path(Messages, string("messageId"));
-
-      expect(uh).toBeDefined();
+      expect(p.make({ c: "sea", f: "eph" })).toEqual("/a/b/sea/d/e/eph");
+      const match = p.match("/a/B/SEE/d/E/FFFFF");
+      expect(match).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {
+            "c": "SEE",
+            "f": "FFFFF",
+          },
+          "remaining": "",
+        }
+      `);
     });
   });
 });

@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export interface Path<Pathname extends string = any, Params extends Record<never, never> = any> {
-  path: Pathname;
-  _params: Params;
+  readonly path: Pathname;
+  readonly _params: Params;
   match(input: string): MatchResult<Params>;
   make(params: Params): string;
 }
@@ -138,6 +138,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   : Ps[0];
 /**
  * Combine two Path definitions with no separator.
+ * You probably want to use `path` instead.
  */
 export const concat = <Rs extends Path[]>(...parts: Rs): ConcatenatedPaths<Rs> => {
   const path: Path<any, any> = {
@@ -204,7 +205,22 @@ type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
     >
   : PathOrTextToPath<Ps[0]>;
 
-export const path = <Rs extends PathOrText[]>(...paths: Rs): SegmentedPath<Rs> => {
-  // TODO implement
-  return undefined as any;
+/**
+ * Define a Path by combining the individual input `paths` in order.
+ *
+ * This is the recommended way to construct paths.
+ *
+ * The inputs can be other paths or literal strings. Any literal strings provided will be converted into
+ * paths by use of the `textSegments` path constructor.
+ */
+export const path = <Ps extends PathOrText[]>(...paths: Ps): SegmentedPath<Ps> => {
+  if (paths.length < 1) return undefined as any;
+  return concat(
+    ...paths.map(part => {
+      if (typeof part === "string") {
+        return textSegments(part);
+      }
+      return part;
+    }),
+  ) as SegmentedPath<Ps>;
 };

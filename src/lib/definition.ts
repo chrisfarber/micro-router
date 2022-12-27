@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-export interface Path<Pathname extends string = any, Params extends Record<never, never> = any> {
+
+export interface Path<Pathname extends string = any, Params = any> {
   readonly path: Pathname;
   readonly _params: Params;
   match(input: string): MatchResult<Params>;
-  make(params: Params): string;
+  make: Params extends Record<string, any> ? (params: Params) => string : () => string;
 }
 
 export type ParamsOf<P extends Path> = P["_params"];
@@ -21,7 +22,8 @@ const makeError = (descr?: string): MatchError =>
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-type ConstPath<P extends string> = Path<P, Record<never, never>>;
+type NoParams = null;
+type ConstPath<P extends string> = Path<P, NoParams>;
 
 type TextOptions = {
   /** defaults to false */
@@ -52,7 +54,7 @@ export const text = <T extends string>(text: T, options?: TextOptions): ConstPat
       if (match(input)) {
         return {
           error: false,
-          params: {},
+          params: null,
           remaining: input.substring(text.length),
         };
       } else {
@@ -87,7 +89,7 @@ export const parseString = <K extends string>(key: K): StringPath<K> => {
     make(params) {
       return params[key];
     },
-  };
+  } as StringPath<K>;
 };
 
 const numberRegexp = /^(\d*\.?\d+)(.*)$/;
@@ -98,32 +100,33 @@ type NumberPath<K extends string> = Path<`:${K}`, Record<K, number>>;
  * Not greedy, unlike `parseString`. It is incompatible with leading slashes, however,
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
-export const parseNumber = <K extends string>(key: K): NumberPath<K> => ({
-  _params: null as any,
-  path: `:${key}`,
-  match(input) {
-    const res = input.match(numberRegexp);
-    if (!res) {
-      return makeError(`input did not appear to be a number: "${input}"`);
-    }
-    const [_, nStr, rest] = res;
-    if (nStr === undefined || rest === undefined) {
-      return makeError("numberRegexp failed");
-    }
-    const num = Number(nStr);
-    if (isNaN(num)) {
-      return makeError(`parsed as NaN: "${nStr}"`);
-    }
-    return {
-      error: false,
-      params: { [key]: num } as Record<K, number>,
-      remaining: rest,
-    };
-  },
-  make(params) {
-    return `${params[key]}`;
-  },
-});
+export const parseNumber = <K extends string>(key: K): NumberPath<K> =>
+  ({
+    _params: null as any,
+    path: `:${key}`,
+    match(input) {
+      const res = input.match(numberRegexp);
+      if (!res) {
+        return makeError(`input did not appear to be a number: "${input}"`);
+      }
+      const [_, nStr, rest] = res;
+      if (nStr === undefined || rest === undefined) {
+        return makeError("numberRegexp failed");
+      }
+      const num = Number(nStr);
+      if (isNaN(num)) {
+        return makeError(`parsed as NaN: "${nStr}"`);
+      }
+      return {
+        error: false,
+        params: { [key]: num } as Record<K, number>,
+        remaining: rest,
+      };
+    },
+    make(params) {
+      return `${params[key]}`;
+    },
+  } as NumberPath<K>);
 
 type Segment<P extends Path> = Path<`/${P["path"]}`, P["_params"]>;
 const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
@@ -161,7 +164,7 @@ export const segment = <P extends Path>(inner: P): Segment<P> => {
     make(params) {
       return `/${inner.make(params)}`;
     },
-  };
+  } as Segment<P>;
 };
 
 /**
@@ -175,12 +178,21 @@ export const string = <K extends string>(key: K) => segment(parseString(key));
  */
 export const number = <K extends string>(key: K) => segment(parseNumber(key));
 
+type PrepareParamsForMerge<P> = P extends null | undefined | never ? unknown : P;
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
   infer P2 extends Path,
   ...infer Rest extends Path[],
 ]
-  ? ConcatenatedPaths<[Path<`${P["path"]}${P2["path"]}`, P["_params"] & P2["_params"]>, ...Rest]>
+  ? ConcatenatedPaths<
+      [
+        Path<
+          `${P["path"]}${P2["path"]}`,
+          PrepareParamsForMerge<P["_params"]> & PrepareParamsForMerge<P2["_params"]>
+        >,
+        ...Rest,
+      ]
+    >
   : Ps[0];
 /**
  * Combine two Path definitions with no separator.
@@ -234,7 +246,6 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string ? TextSegments<P> : P;
-type NormParamsBeforeMerge<P> = P;
 type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
   infer P extends PathOrText,
   infer P2 extends PathOrText,
@@ -244,8 +255,8 @@ type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
       [
         Path<
           `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
-          NormParamsBeforeMerge<PathOrTextToPath<P>["_params"]> &
-            NormParamsBeforeMerge<PathOrTextToPath<P2>["_params"]>
+          PrepareParamsForMerge<PathOrTextToPath<P>["_params"]> &
+            PrepareParamsForMerge<PathOrTextToPath<P2>["_params"]>
         >,
         ...Rest,
       ]

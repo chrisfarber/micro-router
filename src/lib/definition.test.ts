@@ -11,11 +11,11 @@ describe("Route Definition", () => {
       const match = part.match("hellothere");
       expect(match).toEqual({
         error: false,
-        params: {},
+        params: null,
         remaining: "there",
       });
 
-      expect(part.make({})).toEqual("hello");
+      expect(part.make()).toEqual("hello");
     });
 
     it("is case insensitive by default", () => {
@@ -46,7 +46,7 @@ describe("Route Definition", () => {
     });
 
     it("makes a compound string", () => {
-      expect(combined.make({})).toEqual("hellothere");
+      expect(combined.make()).toEqual("hellothere");
     });
 
     it("reports the part that errored", () => {
@@ -128,7 +128,7 @@ describe("Route Definition", () => {
       expect(s.match("this-works")).toMatchInlineSnapshot(`
         {
           "error": false,
-          "params": {},
+          "params": null,
           "remaining": "",
         }
       `);
@@ -136,7 +136,7 @@ describe("Route Definition", () => {
       expect(s.match("this-works")).toMatchInlineSnapshot(`
         {
           "error": false,
-          "params": {},
+          "params": null,
           "remaining": "",
         }
       `);
@@ -149,14 +149,14 @@ describe("Route Definition", () => {
       expect(s.match("/this-works")).toMatchInlineSnapshot(`
         {
           "error": false,
-          "params": {},
+          "params": null,
           "remaining": "",
         }
       `);
       expect(s.match("/this-works/")).toMatchInlineSnapshot(`
         {
           "error": false,
-          "params": {},
+          "params": null,
           "remaining": "/",
         }
       `);
@@ -169,7 +169,7 @@ describe("Route Definition", () => {
 
       expect(s.match("/this-works/too")).toEqual({
         error: false,
-        params: {},
+        params: null,
         remaining: "/too",
       });
 

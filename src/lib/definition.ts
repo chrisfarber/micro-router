@@ -66,29 +66,23 @@ export const text = <T extends string>(text: T, options?: TextOptions): ConstPat
   };
 };
 
-// TODO this regexp is broken
-const stringParamRegexp = /^[0-9A-Za-z_\\-]+/;
-/** Matches the input text until one of the following characters are encountered: "/?#". Extracts
- * the value into the supplied params. */
-export const stringParam = <K extends string>(key: K): Path<`:${K}`, Record<K, string>> => {
+type StringPath<K extends string> = Path<`:${K}`, Record<K, string>>;
+/** A Path that consumes the input text into a param.
+ * This matching occurs greedily; you can expect it to consume the entire path.
+ * Therefore, you probably want to use the segment wrapped version instead, `string`.
+ */
+export const parseString = <K extends string>(key: K): StringPath<K> => {
   return {
     _params: null as any,
     path: `:${key}`,
     match(input) {
-      const match = input.match(stringParamRegexp);
-      if (!match) {
-        return {
-          error: true,
-          description: `expected to find string param ":${key}", found: "${input}"`,
-        };
+      if (input.length < 1) {
+        return { error: true, description: `parseString for :${key} expected a non-empty input` };
       }
-      const [found] = match;
       return {
         error: false,
-        params: { [key]: found } as Record<K, string>,
-        // TODO figure out why vite build complains about this:
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        remaining: input.substring(found!.length),
+        params: { [key]: input } as Record<K, string>,
+        remaining: "",
       };
     },
     make(params) {
@@ -97,10 +91,9 @@ export const stringParam = <K extends string>(key: K): Path<`:${K}`, Record<K, s
   };
 };
 
+type Segment<P extends Path> = Path<`/${P["path"]}`, P["_params"]>;
 const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
-export const segment = <P extends Path>(
-  inner: P extends Path<`${any}/${any}`, any> ? never : P,
-): Path<`/${P["path"]}`, P["_params"]> => {
+export const segment = <P extends Path>(inner: P): Segment<P> => {
   return {
     _params: null as any,
     path: `/${inner.path}` as any,
@@ -130,6 +123,11 @@ export const segment = <P extends Path>(
     },
   };
 };
+
+/** A Path that, when matching, will consume the entire first path segment as a string and
+ * capture it as the key `key` of Params.
+ */
+export const string = <K extends string>(key: K) => segment(parseString(key));
 
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
@@ -187,7 +185,7 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 };
 
 type PathOrText = Path | string;
-type PathOrTextToPath<P extends PathOrText> = P extends string ? ConstPath<LeadingSlash<P>> : P;
+type PathOrTextToPath<P extends PathOrText> = P extends string ? TextSegments<P> : P;
 type NormParamsBeforeMerge<P> = P;
 type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
   infer P extends PathOrText,

@@ -21,12 +21,31 @@ type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadin
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
 type ConstPath<P extends string> = Path<P, Record<never, never>>;
-export const text = <T extends string>(text: T): ConstPath<T> => {
+type TextOptions = {
+  /** defaults to false */
+  caseSensitive?: boolean;
+};
+
+const matchTextCaseSensitive =
+  (text: string) =>
+  (input: string): boolean =>
+    input.startsWith(text);
+
+const matchTextCaseInsensitive = (text: string) => {
+  const toMatch = text.toLocaleLowerCase();
+  return (input: string): boolean => {
+    return input.substring(0, toMatch.length).toLocaleLowerCase() === toMatch;
+  };
+};
+
+export const text = <T extends string>(text: T, options?: TextOptions): ConstPath<T> => {
+  const caseSensitive = options?.caseSensitive;
+  const match = (caseSensitive ? matchTextCaseSensitive : matchTextCaseInsensitive)(text);
   return {
     _params: null as any,
     path: text,
     match(input) {
-      if (input.startsWith(text)) {
+      if (match(input)) {
         return {
           error: false,
           params: {},
@@ -65,7 +84,9 @@ export const stringParam = <K extends string>(key: K): Path<`:${K}`, Record<K, s
       return {
         error: false,
         params: { [key]: found } as Record<K, string>,
-        remaining: input.substring(found.length),
+        // TODO figure out why vite build complains about this:
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        remaining: input.substring(found!.length),
       };
     },
     make(params) {

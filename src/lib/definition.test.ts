@@ -17,6 +17,22 @@ describe("Route Definition", () => {
 
       expect(part.make({})).toEqual("hello");
     });
+
+    it("is case insensitive by default", () => {
+      const lc = text("lowercase");
+      const uc = text("LOWERCASE");
+
+      expect(lc.match("lowerCASE").error).toBeFalsy();
+      expect(uc.match("lowerCASE").error).toBeFalsy();
+      expect(uc.match("UPPERCASE").error).toBeTruthy();
+    });
+
+    it("can be made case sensitive", () => {
+      const uc = text("LOWERCASE", { caseSensitive: true });
+      expect(uc.match("LOWERCASE").error).toBeFalsy();
+      expect(uc.match("lowercase").error).toBeTruthy();
+      expect(uc.match("UPPERCASE").error).toBeTruthy();
+    });
   });
   describe("concat", () => {
     const combined = concat(text("hello"), text("there"));
@@ -110,6 +126,7 @@ describe("Route Definition", () => {
 
   describe("path", () => {
     it("defines successfully", () => {
+      const blank = path();
       const uh = path("l/hello");
 
       const other = path(path("/a", "b"), "ce", "/d", segment(stringParam("e")));

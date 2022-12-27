@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { concat, path, segment, stringParam, text } from "./definition";
+import { concat, path, segment, stringParam, text, textSegments } from "./definition";
 
 describe("Route Definition", () => {
   describe("text", () => {
@@ -157,6 +157,25 @@ describe("Route Definition", () => {
 
       const description: typeof s["path"] = "/this-works";
       expect(s.path).toEqual(description);
+    });
+  });
+
+  describe("textSegments", () => {
+    it("generates the correct runtime description", () => {
+      const p = textSegments("a/b/c/d");
+      const expected: typeof p["path"] = "/a/b/c/d";
+      expect(p.path).toEqual(expected);
+    });
+
+    it("matches on entire path segments", () => {
+      // Thanks to Ira for the test data contribution:
+      const path = textSegments("/bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker/");
+      expect(path.match("/bird-seed").error).toBeTruthy();
+      expect(path.match("/bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker/").error).toBeFalsy();
+      expect(path.match("bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker").error).toBeFalsy();
+      expect(
+        path.match("/bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker-easy").error,
+      ).toBeTruthy();
     });
   });
 

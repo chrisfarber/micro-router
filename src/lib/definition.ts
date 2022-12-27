@@ -8,19 +8,18 @@ export interface Path<Pathname extends string = any, Params extends Record<never
   make(params: Params): string;
 }
 
-type ParamsOf<R extends Path> = R["_params"];
+type ParamsOf<P extends Path> = P["_params"];
+type PathOf<P extends Path> = P["path"];
 
 type MatchError = { error: true; description?: string };
 type MatchSuccess<P> = { error: false; params: P; remaining: string };
 type MatchResult<P> = MatchError | MatchSuccess<P>;
 
-type SubPath<Path extends string, Sub extends string> = `${LeadingSlash<Path>}${LeadingSlash<Sub>}`;
-type PathOf<R extends Path> = R["path"];
-
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
 type ConstPath<P extends string> = Path<P, Record<never, never>>;
+
 type TextOptions = {
   /** defaults to false */
   caseSensitive?: boolean;
@@ -132,24 +131,6 @@ export const segment = <P extends Path>(
   };
 };
 
-type SegmentedText<T extends string> = ConstPath<LeadingSlash<T>>;
-/**
- * A path that matches on complete segments of the input text.
- *
- * This path will fail to match if there is any extra text at the end of the last matching path segment.
- *
- * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
- * @returns
- */
-export const segmentedText = <T extends string>(path: T): SegmentedText<T> => {
-  return text(
-    `/${path
-      .split("/")
-      .filter(part => part !== "")
-      .join("/")}`,
-  ) as any;
-};
-
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
   infer P2 extends Path,
@@ -182,7 +163,27 @@ export const concat = <Rs extends Path[]>(...parts: Rs): ConcatenatedPaths<Rs> =
     },
   };
 
-  return path as any;
+  return path as ConcatenatedPaths<Rs>;
+};
+
+type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
+/**
+ * A path that matches on complete segments of the input text.
+ *
+ * This path will fail to match if there is any extra text at the end of the last matching path segment.
+ *
+ * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
+ * @returns
+ */
+export const textSegments = <T extends string>(path: T): TextSegments<T> => {
+  // although kind of elegant, if this proves to be a performance bottleneck, I should refactor this
+  // to simply be a single text match + a check that we've consumed the end of the current segment.
+  return concat(
+    ...path
+      .split("/")
+      .filter(part => part !== "")
+      .map(part => segment(text(part))),
+  ) as Path;
 };
 
 type PathOrText = Path | string;

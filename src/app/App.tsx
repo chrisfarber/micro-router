@@ -14,7 +14,6 @@ const MessageEditPath = Path.path(MessageByIdPath, "edit", Path.string("part"));
 const SubMessageEditPath = Path.path(MessageEditPath, Path.string("unused"));
 
 const history = new BrowserHistory();
-history.observe(loc => console.log("location changed", loc));
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).hist = history;
 
@@ -72,7 +71,16 @@ const EditRoute = route(MessageEditPath, params => {
   );
 });
 
-const Switch = routeSwitch(BaseRoute, EditRoute);
+const MessageRoute = route(MessageByIdPath, params => {
+  return (
+    <div>
+      <h4>Message By ID Route</h4>
+      <p>id: {params.messageId}</p>
+    </div>
+  );
+});
+
+const Switch = routeSwitch(BaseRoute, EditRoute, MessageRoute);
 
 function App() {
   const [mounted, setMounted] = useState(true);
@@ -92,6 +100,7 @@ function App() {
               <Go title="Go forward" offset={1} />
             </p>
             <Where />
+            <BaseRoute exact />
             <Switch />
             <h3>Links</h3>
             <div>
@@ -110,6 +119,11 @@ function App() {
                 </li>
                 <li>
                   <Link to={MessagesPath}>Messages</Link>
+                </li>
+                <li>
+                  <Link to={MessageByIdPath} params={{ messageId: "4" }}>
+                    Message By ID 4
+                  </Link>
                 </li>
                 <li>
                   <Link to={MessageEditPath} params={{ messageId: "44", part: "5" }}>

@@ -1,4 +1,4 @@
-import { FC, useMemo } from "react";
+import { FC, ReactElement, useMemo } from "react";
 import { MatchResult, ParamsOf, Path } from "./definition";
 import { useLocation } from "./hooks";
 
@@ -9,7 +9,9 @@ const exactMatch = (m: MatchResult<unknown>): boolean => {
   return false;
 };
 
-const usePathMatch = <P extends Path>(path: P, exact?: boolean): [true, ParamsOf<P>] | [false, null] => {
+export type PathMatchOpts = { exact?: boolean };
+const usePathMatch = <P extends Path>(path: P, opts?: PathMatchOpts): [true, ParamsOf<P>] | [false, null] => {
+  const { exact } = opts ?? {};
   const loc = useLocation();
   const [matches, params] = useMemo(() => {
     const match = path.match(loc.pathname);
@@ -21,27 +23,56 @@ const usePathMatch = <P extends Path>(path: P, exact?: boolean): [true, ParamsOf
   return [matches, params];
 };
 
+type RouteComponentProps = {
+  /** If true, the Route will not render its content if there is any remaining text at the end of the match */
+  exact?: boolean;
+};
 export type RouteComponent<P extends Path = Path> = {
   path: P;
   Matched: FC<ParamsOf<P>>;
-} & FC;
+} & FC<RouteComponentProps>;
 
-export const route = <P extends Path>(path: P, Route: FC<ParamsOf<P>>): RouteComponent<P> => {
-  const Inner: FC = () => {
-    const [match, params] = usePathMatch(path);
+/**
+ * Construct a Route Component for a path.
+ *
+ * A Route component will render its content if its associated path matches the current URL.
+ * Optionally, the route component can accept the `exact` prop.
+ *
+ * @param path the path that must match in order to display the route's content
+ * @param Route a function component that will receive the extracted params as its props
+ * @returns the new Route Component
+ */
+export const route = <P extends Path>(
+  path: P,
+  render: (params: ParamsOf<P>) => ReactElement | null,
+): RouteComponent<P> => {
+  const Matched: FC<ParamsOf<P>> = render;
+  Matched.displayName = `Match: ${path.path}`;
+
+  const Outer: FC<RouteComponentProps> = props => {
+    const { exact } = props;
+    const [match, params] = usePathMatch(path, { exact });
     if (!match) return null;
-    return <Route {...params} />;
+    return <Matched {...params} />;
   };
-  Inner.displayName = `Route: ${path.path}`;
-  Route.displayName = `Match: ${path.path}`;
+  Outer.displayName = `Route: ${path.path}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Rend: RouteComponent<P> = Inner as any;
-  Rend.path = path;
-  Rend.Matched = Route;
-  return Rend;
+  const Route: RouteComponent<P> = Outer as any;
+  Route.path = path;
+  Route.Matched = Matched;
+  return Route;
 };
 
+/**
+ * Build a Component that will choose the best match among your input Routes.
+ *
+ * The best match is considered to be the one that has the least unmatched text at the end of
+ * the browser's actual path.
+ *
+ * @param routes The Route components you'd like this component to match against
+ * @returns A new React component
+ */
 export const routeSwitch = <Routes extends RouteComponent[]>(...routes: Routes): FC => {
   const RouteSwitch: FC = () => {
     const loc = useLocation();
@@ -63,6 +94,6 @@ export const routeSwitch = <Routes extends RouteComponent[]>(...routes: Routes):
     }, [pathname]);
     return route;
   };
-  RouteSwitch.displayName = "RouteSwitch";
+  RouteSwitch.displayName = `RouteSwitch of ${routes.length} routes`;
   return RouteSwitch;
 };

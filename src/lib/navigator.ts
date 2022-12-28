@@ -8,6 +8,8 @@ type StopListening = () => void;
 export interface INavigator {
   get location(): Location;
 
+  go(offset: number): void;
+
   push(path: string): void;
   push<P extends ConstPath>(path: P): void;
   push<P extends Path>(path: P, params: ParamsOf<P>): void;
@@ -45,6 +47,11 @@ export class Navigator implements INavigator {
     return () => {
       this.listeners.delete(f);
     };
+  }
+
+  go(offset: number): void {
+    this.history.go(offset);
+    this.updateAndNotify();
   }
 
   push(path: string | Path, params?: unknown): void {

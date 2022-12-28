@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { MouseEvent, useCallback, useState } from "react";
 import { NavigatorProvider, useNavigator } from "../lib";
 import * as Path from "../lib/definition";
 import { BrowserHistory } from "../lib/history/browser";
@@ -33,6 +33,22 @@ const TestingNavTypes = () => {
   return <div></div>;
 };
 
+const Go = ({ offset, title }: { offset: number; title: string }) => {
+  const nav = useNavigator();
+  const onClick = useCallback(
+    (e: MouseEvent) => {
+      e.preventDefault();
+      nav.go(offset);
+    },
+    [nav, offset],
+  );
+  return (
+    <a href="#" onClick={onClick}>
+      {title}
+    </a>
+  );
+};
+
 function App() {
   const [mounted, setMounted] = useState(true);
   return (
@@ -45,6 +61,11 @@ function App() {
       {mounted && (
         <NavigatorProvider history={history}>
           <div className="App">
+            <p>
+              <Go title="Go back" offset={-1} />
+              {", "}
+              <Go title="Go forward" offset={1} />
+            </p>
             <Where />
             <h3>Links</h3>
             <div>

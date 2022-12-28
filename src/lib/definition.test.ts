@@ -115,6 +115,9 @@ describe("Route Definition", () => {
         }
       `);
 
+      const desc: typeof p["path"] = "/:price[number]";
+      expect(p.path).toEqual(desc);
+
       expect(p.make({ price: 100 })).toEqual("/100");
       expect(p.make({ price: 100.0 })).toEqual("/100");
       expect(p.make({ price: 4.2 })).toEqual("/4.2");
@@ -220,6 +223,7 @@ describe("Route Definition", () => {
 
       const notBlank = path("l/hello");
       expect(notBlank).toBeDefined();
+      expect(notBlank.match("/l/hello/bye").error).toBeFalsy();
     });
 
     it("matches and generates on a complex example", () => {
@@ -228,7 +232,7 @@ describe("Route Definition", () => {
       expect(p.path).toEqual(descr);
 
       expect(p.make({ c: "sea", f: "eph" })).toEqual("/a/b/sea/d/e/eph");
-      const match = p.match("/a/B/SEE/d/E/FFFFF");
+      const match = p.match("/a/B/SEE/d/E/FFFFF/geee");
       expect(match).toMatchInlineSnapshot(`
         {
           "error": false,
@@ -236,7 +240,7 @@ describe("Route Definition", () => {
             "c": "SEE",
             "f": "FFFFF",
           },
-          "remaining": "",
+          "remaining": "/geee",
         }
       `);
     });

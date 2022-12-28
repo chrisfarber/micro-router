@@ -93,7 +93,7 @@ export const parseString = <K extends string>(key: K): StringPath<K> => {
 };
 
 const numberRegexp = /^(\d*\.?\d+)(.*)$/;
-type NumberPath<K extends string> = Path<`:${K}`, Record<K, number>>;
+type NumberPath<K extends string> = Path<`:${K}[number]`, Record<K, number>>;
 /**
  * A path that succeeds if it can parse the beginning of the input as a base 10 number.
  *
@@ -103,7 +103,7 @@ type NumberPath<K extends string> = Path<`:${K}`, Record<K, number>>;
 export const parseNumber = <K extends string>(key: K): NumberPath<K> =>
   ({
     _params: null as any,
-    path: `:${key}`,
+    path: `:${key}[number]`,
     match(input) {
       const res = input.match(numberRegexp);
       if (!res) {

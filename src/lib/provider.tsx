@@ -1,10 +1,10 @@
 import { createContext, FC, PropsWithChildren, useContext, useEffect, useMemo } from "react";
 import { History } from "./history";
-import { Navigator } from "./navigator";
+import { INavigator, Navigator } from "./navigator";
 
 const NavigatorContext = createContext<Navigator | null>(null);
 
-export const useNavigator = (): Navigator => {
+export const useNavigator = (): INavigator => {
   const navigator = useContext(NavigatorContext);
   if (!navigator) {
     throw new Error("No navigator was provided. Provide one using <NavigatorProvider>.");

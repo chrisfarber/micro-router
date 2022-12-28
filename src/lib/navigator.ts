@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Path } from "./definition";
+import { ConstPath, ParamsOf, Path } from "./definition";
 import { History, Location } from "./history";
 
 type Listener = (l: Location) => void;
@@ -9,8 +9,12 @@ export interface INavigator {
   get location(): Location;
 
   push(path: string): void;
-  push<P extends Path<any, never | null | undefined>>(path: P): void;
-  push<P extends Path>(path: P, params: P["_params"]): void;
+  push<P extends ConstPath>(path: P): void;
+  push<P extends Path>(path: P, params: ParamsOf<P>): void;
+
+  replace(path: string): void;
+  replace<P extends ConstPath>(path: P): void;
+  replace<P extends Path>(path: P, params: ParamsOf<P>): void;
 }
 
 export class Navigator implements INavigator {
@@ -43,18 +47,20 @@ export class Navigator implements INavigator {
     };
   }
 
-  // push<P extends Path | string>(to: P) {
-  //   const path = typeof to === "string" ? to : to.make();
-  //   this.history.push(path);
-  // }
-  push(path: string): void;
-  push<P extends Path<any, null | undefined>>(path: P): void;
-  push<P extends Path<any, any>>(path: P, params: P["_params"]): void;
-  push(path: string | Path, params?: any): void {
+  push(path: string | Path, params?: unknown): void {
     if (typeof path === "string") {
       this.history.push(path);
     } else {
       this.history.push(path.make(params || {}));
+    }
+    this.updateAndNotify();
+  }
+
+  replace(path: string | Path, params?: unknown): void {
+    if (typeof path === "string") {
+      this.history.replace(path);
+    } else {
+      this.history.replace(path.make(params || {}));
     }
     this.updateAndNotify();
   }

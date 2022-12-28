@@ -22,8 +22,10 @@ const makeError = (descr?: string): MatchError =>
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-type NoParams = null;
-type ConstPath<P extends string> = Path<P, NoParams>;
+type NoParams = unknown;
+export type ConstPath<P extends string = any> = Path<P, NoParams>;
+// kind of broken right now:
+type ParametricPath<P extends string = any, Params extends Record<string, unknown> = any> = Path<P, Params>;
 
 type TextOptions = {
   /** defaults to false */

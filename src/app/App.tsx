@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { NavigatorProvider } from "../lib";
+import { NavigatorProvider, useNavigator } from "../lib";
 import * as Path from "../lib/definition";
 import { BrowserHistory } from "../lib/history/browser";
 import { useLocation } from "../lib/hooks";
 import { Link } from "../lib/Link";
 import "./App.css";
+
+const BasePath = Path.path("/base");
+const MessagesPath = Path.path(BasePath, "messages");
+const MessageByIdPath = Path.path(MessagesPath, Path.string("messageId"));
+const MessageEditPath = Path.path(MessageByIdPath, "edit", Path.string("part"));
 
 const history = new BrowserHistory();
 history.observe(loc => console.log("location changed", loc));
@@ -16,10 +21,17 @@ const Where = () => {
   return <p>You are at: {JSON.stringify(loc, null, 2)}</p>;
 };
 
-const BasePath = Path.path("/base");
-const MessagesPath = Path.path(BasePath, "messages");
-const MessageByIdPath = Path.path(MessagesPath, Path.string("messageId"));
-const MessageEditPath = Path.path(MessageByIdPath, "edit", Path.string("part"));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const TestingNavTypes = () => {
+  const nav = useNavigator();
+  nav.push("woah");
+  nav.push(BasePath);
+  nav.push(MessagesPath);
+  nav.push(MessageEditPath, { messageId: "aoeu", part: "aeu" });
+  // @ts-expect-error must supply params
+  nav.push(MessageEditPath);
+  return <div></div>;
+};
 
 function App() {
   const [mounted, setMounted] = useState(true);
@@ -33,6 +45,7 @@ function App() {
       {mounted && (
         <NavigatorProvider history={history}>
           <div className="App">
+            <Where />
             <h3>Links</h3>
             <div>
               <ul>
@@ -49,16 +62,14 @@ function App() {
                   <Link to={MessagesPath}>Messages</Link>
                 </li>
                 <li>
+                  {/* <Link to={MessageEditPath}>broke</Link> */}
+
                   <Link to={MessageEditPath} params={{ messageId: "44", part: "5" }}>
                     Edit
                   </Link>
                 </li>
               </ul>
             </div>
-
-            <Where />
-            <p>...</p>
-            <Where />
           </div>
         </NavigatorProvider>
       )}

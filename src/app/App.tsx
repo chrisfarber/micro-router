@@ -4,6 +4,7 @@ import * as Path from "../lib/definition";
 import { BrowserHistory } from "../lib/history/browser";
 import { useLocation } from "../lib/hooks";
 import { Link } from "../lib/Link";
+import { Route } from "../lib/Route";
 import "./App.css";
 
 const BasePath = Path.path("/base");
@@ -49,6 +50,10 @@ const Go = ({ offset, title }: { offset: number; title: string }) => {
   );
 };
 
+const BaseRoute = () => {
+  return <p>base route!</p>;
+};
+
 function App() {
   const [mounted, setMounted] = useState(true);
   return (
@@ -67,6 +72,7 @@ function App() {
               <Go title="Go forward" offset={1} />
             </p>
             <Where />
+            <Route path={BasePath} component={BaseRoute} exact />
             <h3>Links</h3>
             <div>
               <ul>
@@ -78,6 +84,9 @@ function App() {
                 </li>
                 <li>
                   <Link to="/something%20-with-and-anchors?foo=false#aaaa">Another complex example</Link>
+                </li>
+                <li>
+                  <Link to={BasePath}>Base</Link>
                 </li>
                 <li>
                   <Link to={MessagesPath}>Messages</Link>

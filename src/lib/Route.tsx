@@ -46,24 +46,22 @@ export const routeSwitch = <Routes extends RouteComponent[]>(...routes: Routes):
   const RouteSwitch: FC = () => {
     const loc = useLocation();
     const { pathname } = loc;
-    const Route = useMemo(() => {
-      let best: { Route: RouteComponent; remaining: number } | null = null;
+    const route = useMemo(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let best: { Route: RouteComponent; remaining: number; params: any } | null = null;
       for (const Route of routes) {
         const { path } = Route;
         const res = path.match(pathname);
         if (res.error) continue;
-        if (exactMatch(res)) {
-          return Route;
-        }
         const remaining = res.remaining.length;
         if (!best || best.remaining > remaining) {
-          best = { Route, remaining };
+          best = { Route, remaining, params: res.params };
         }
+        if (exactMatch(res)) break;
       }
-      return best?.Route ?? null;
+      return best ? <best.Route.Matched {...best.params} /> : null;
     }, [pathname]);
-    if (Route) return <Route />;
-    return null;
+    return route;
   };
   RouteSwitch.displayName = "RouteSwitch";
   return RouteSwitch;

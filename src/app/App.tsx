@@ -4,13 +4,14 @@ import * as Path from "../lib/definition";
 import { BrowserHistory } from "../lib/history/browser";
 import { useLocation } from "../lib/hooks";
 import { Link } from "../lib/Link";
-import { Route } from "../lib/Route";
+import { route, routeSwitch } from "../lib/Route";
 import "./App.css";
 
 const BasePath = Path.path("/base");
 const MessagesPath = Path.path(BasePath, "messages");
 const MessageByIdPath = Path.path(MessagesPath, Path.string("messageId"));
 const MessageEditPath = Path.path(MessageByIdPath, "edit", Path.string("part"));
+const SubMessageEditPath = Path.path(MessageEditPath, Path.string("unused"));
 
 const history = new BrowserHistory();
 history.observe(loc => console.log("location changed", loc));
@@ -50,9 +51,28 @@ const Go = ({ offset, title }: { offset: number; title: string }) => {
   );
 };
 
-const BaseRoute = () => {
-  return <p>base route!</p>;
-};
+const BaseRoute = route(BasePath, () => <h4>base route!</h4>);
+
+const EditRoute = route(MessageEditPath, params => {
+  const [ctr, setCtr] = useState(0);
+  return (
+    <div>
+      <h4>Message edit route</h4>
+      <p>Counter: {ctr}</p>
+      <button
+        onClick={e => {
+          setCtr(ctr + 1);
+        }}
+      >
+        Increment
+      </button>
+      <p>Message ID: {params.messageId}</p>
+      <p>Part: {params.part}</p>
+    </div>
+  );
+});
+
+const Switch = routeSwitch(BaseRoute, EditRoute);
 
 function App() {
   const [mounted, setMounted] = useState(true);
@@ -72,7 +92,7 @@ function App() {
               <Go title="Go forward" offset={1} />
             </p>
             <Where />
-            <Route path={BasePath} component={BaseRoute} exact />
+            <Switch />
             <h3>Links</h3>
             <div>
               <ul>
@@ -92,10 +112,13 @@ function App() {
                   <Link to={MessagesPath}>Messages</Link>
                 </li>
                 <li>
-                  {/* <Link to={MessageEditPath}>broke</Link> */}
-
                   <Link to={MessageEditPath} params={{ messageId: "44", part: "5" }}>
                     Edit
+                  </Link>
+                </li>
+                <li>
+                  <Link to={SubMessageEditPath} params={{ messageId: "44", part: "5", unused: "yeah" }}>
+                    Sub Edit
                   </Link>
                 </li>
               </ul>

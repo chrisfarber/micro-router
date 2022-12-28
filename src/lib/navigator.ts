@@ -3,7 +3,7 @@ import { History, Location } from "./history";
 type Listener = (l: Location) => void;
 type StopListening = () => void;
 
-export class Router {
+export class Navigator {
   constructor(private history: History) {
     this._location = Object.freeze(history.location);
   }

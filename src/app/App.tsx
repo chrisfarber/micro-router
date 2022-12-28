@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RouterProvider } from "../lib";
+import { NavigatorProvider } from "../lib";
 import { BrowserHistory } from "../lib/history/browser";
 import { useLocation } from "../lib/hooks";
 import "./App.css";
@@ -19,17 +19,19 @@ function App() {
   return (
     <>
       <div>
-        <button onClick={() => setMounted(v => !v)}>{mounted ? "Unmount router" : "Mount router"}</button>
+        <button onClick={() => setMounted(v => !v)}>
+          {mounted ? "Unmount navigator" : "Mount navigator"}
+        </button>
       </div>
       {mounted && (
-        <RouterProvider history={history}>
+        <NavigatorProvider history={history}>
           <div className="App">
             <h3>...</h3>
             <Where />
             <p>...</p>
             <Where />
           </div>
-        </RouterProvider>
+        </NavigatorProvider>
       )}
     </>
   );

@@ -1,23 +1,22 @@
 import { createContext, FC, PropsWithChildren, useContext, useEffect, useMemo } from "react";
 import { History } from "./history";
-import { Router } from "./router";
+import { Navigator } from "./navigator";
 
-const RouterContext = createContext<Router | null>(null);
+const NavigatorContext = createContext<Navigator | null>(null);
 
-export const useRouter = (): Router => {
-  const router = useContext(RouterContext);
-  if (!router) {
-    throw new Error("No router was provided. Provide one using <RouterProvider>.");
+export const useNavigator = (): Navigator => {
+  const navigator = useContext(NavigatorContext);
+  if (!navigator) {
+    throw new Error("No navigator was provided. Provide one using <NavigatorProvider>.");
   }
-  return router;
+  return navigator;
 };
 
-export const RouterProvider: FC<PropsWithChildren<{ history: History }>> = ({ history, children }) => {
-  const router = useMemo(() => new Router(history), [history]);
-  console.log("made router", router);
+export const NavigatorProvider: FC<PropsWithChildren<{ history: History }>> = ({ history, children }) => {
+  const navigator = useMemo(() => new Navigator(history), [history]);
   useEffect(() => {
-    router.start();
-    return () => router.stop();
-  }, [router]);
-  return <RouterContext.Provider value={router}>{children}</RouterContext.Provider>;
+    navigator.start();
+    return () => navigator.stop();
+  }, [navigator]);
+  return <NavigatorContext.Provider value={navigator}>{children}</NavigatorContext.Provider>;
 };

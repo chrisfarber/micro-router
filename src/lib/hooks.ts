@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "./provider";
+import { useNavigator } from "./provider";
 
 export const useLocation = () => {
-  const router = useRouter();
-  const [location, setLocation] = useState(router.location);
-  useEffect(() => router.listen(loc => setLocation(loc)), [router]);
+  const navigator = useNavigator();
+  const [location, setLocation] = useState(navigator.location);
+  useEffect(() => navigator.listen(loc => setLocation(loc)), [navigator]);
   return location;
 };

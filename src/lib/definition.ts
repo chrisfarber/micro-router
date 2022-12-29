@@ -13,8 +13,8 @@ export type ParamsOf<P extends Path> = P["_params"];
 export type PathOf<P extends Path> = P["path"];
 
 export type MatchError = { readonly error: true; readonly description?: string };
-export type MatchSuccess<P> = { readonly error: false; readonly params: P; readonly remaining: string };
-export type MatchResult<P> = MatchError | MatchSuccess<P>;
+export type MatchSuccess<P = any> = { readonly error: false; readonly params: P; readonly remaining: string };
+export type MatchResult<P = any> = MatchError | MatchSuccess<P>;
 
 const makeError = (descr?: string): MatchError =>
   descr ? { error: true, description: descr } : { error: true };
@@ -170,13 +170,13 @@ export const segment = <P extends Path>(inner: P): Segment<P> => {
 };
 
 /**
- * A Path that, when matching, will consume the entire first path segment as a string and
- * capture it as the key `key` of Params.
+ * A Path that, when matching, will consume a path segment as a string and capture it as the key
+ * `key` of Params.
  */
 export const string = <K extends string>(key: K) => segment(parseString(key));
 /**
- * A Path that will consume the entire first path segment and parse it as a number, capturing
- * it as the key `key` of Params.
+ * A Path that will consume a path segment and parse it as a number, capturing it as the key `key`
+ * of Params.
  */
 export const number = <K extends string>(key: K) => segment(parseNumber(key));
 
@@ -197,7 +197,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
     >
   : Ps[0];
 /**
- * Combine two Path definitions with no separator.
+ * Combine many Path definitions with no separator.
  * Succeeds if all inner Paths succeed.
  * You probably want to use `path` instead.
  */

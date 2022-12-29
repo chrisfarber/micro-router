@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { concat, number, path, segment, string, text, textSegments } from "./definition";
 
-describe("Route Definition", () => {
+describe("Path Definition", () => {
   describe("text", () => {
     it("matches strings", () => {
       const part = text("hello");
@@ -68,7 +68,6 @@ describe("Route Definition", () => {
       expect(combined.path).toEqual(path);
     });
   });
-  it("can construct simple routes", () => {});
 
   describe("string", () => {
     it("parses text", () => {

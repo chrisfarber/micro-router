@@ -1,25 +1,27 @@
 import { useState } from "react";
 import { BrowserHistory, Link, NavigatorProvider, route, routeSwitch } from "../lib";
-import * as Path from "../lib/definition";
+import { path, string, number } from "../lib/definition";
 import "./App.css";
 import { Go } from "./Go";
 import { WhereAmI } from "./WhereAmI";
 
 const history = new BrowserHistory();
 
-const BasePath = Path.path("/base");
-const MessagesPath = Path.path(BasePath, "messages");
-const MessageByIdPath = Path.path(MessagesPath, Path.string("messageId"));
-const MessageEditPath = Path.path(MessageByIdPath, "edit", Path.string("part"));
-const SubMessageEditPath = Path.path(MessageEditPath, Path.number("unused"));
+const BasePath = path("/base");
+const MessagesPath = path(BasePath, "messages");
+const MessageByIdPath = path(MessagesPath, string("messageId"));
+const MessageEditPath = path(MessageByIdPath, "edit", string("part"));
+const SubMessageEditPath = path(MessageEditPath, number("unused"));
 
-const BaseRoute = route(BasePath, () => <h4>base route!</h4>);
+const BaseRoute = route(BasePath, () => <h4>BasePath</h4>);
 
-const EditRoute = route(MessageEditPath, params => {
+const MessagesRoute = route(MessagesPath, () => <h4>MessagesPath</h4>);
+
+const MessageEditRoute = route(MessageEditPath, params => {
   const [ctr, setCtr] = useState(0);
   return (
     <div>
-      <h4>Message edit route</h4>
+      <h4>MessageEditPath</h4>
       <p>Counter: {ctr}</p>
       <button
         onClick={() => {
@@ -37,13 +39,13 @@ const EditRoute = route(MessageEditPath, params => {
 const MessageRoute = route(MessageByIdPath, params => {
   return (
     <div>
-      <h4>Message By ID Route</h4>
+      <h4>MessageByIdPath</h4>
       <p>id: {params.messageId}</p>
     </div>
   );
 });
 
-const Switch = routeSwitch(BaseRoute, EditRoute, MessageRoute);
+const AppSwitch = routeSwitch(BaseRoute, MessagesRoute, MessageEditRoute, MessageRoute);
 
 function App() {
   const [mounted, setMounted] = useState(true);
@@ -63,8 +65,9 @@ function App() {
               <Go title="Go forward" offset={1} />
             </p>
             <WhereAmI />
+            <AppSwitch />
+            <h3>This section will be blank unless you are on the BasePath:</h3>
             <BaseRoute exact />
-            <Switch />
             <h3>Links</h3>
             <div>
               <ul>
@@ -77,6 +80,11 @@ function App() {
                 <li>
                   <Link to={MessageByIdPath} params={{ messageId: "4" }}>
                     MessageByIdPath (messageId: 4)
+                  </Link>
+                </li>
+                <li>
+                  <Link to={MessageByIdPath} params={{ messageId: "5" }}>
+                    MessageByIdPath (messageId: 5)
                   </Link>
                 </li>
                 <li>

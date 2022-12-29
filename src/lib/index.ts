@@ -8,5 +8,6 @@ export { MemoryHistory } from "./history/memory";
 export { Navigator } from "./navigator";
 export { useLocation } from "./hooks";
 export * from "./Link";
+export * from "./routing";
 
 export * as definition from "./definition";

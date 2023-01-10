@@ -90,8 +90,6 @@ export const bestMatch = <Matches extends MatchComponent[]>({
     const loc = useLocation();
     const { pathname } = loc;
     const matched = useMemo(() => {
-      // I don't think this lint rule believes in me, but I do:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let best: { Match: MatchComponent; result: MatchSuccess } | null = null;
       for (const Match of of) {
         const { path } = Match;

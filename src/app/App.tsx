@@ -82,6 +82,7 @@ const PageNotFound = () => {
 
 const AppPages = bestMatch({
   of: [BasePage, MessagesPage, MessagePage, MessageEditPage, SubMessageEditPage],
+  // these ultimately could be props of the resulting `AppPages` component:
   fallback: <PageNotFound />,
   exact: true,
 });

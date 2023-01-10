@@ -22,7 +22,7 @@ const makeError = (descr?: string): MatchError =>
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-type NoParams = unknown;
+type NoParams = null;
 export type ConstPath<P extends string = any> = Path<P, NoParams>;
 // kind of broken right now:
 type ParametricPath<P extends string = any, Params extends Record<string, unknown> = any> = Path<P, Params>;
@@ -248,6 +248,8 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string ? TextSegments<P> : P;
+type ParamsOfPT<P extends PathOrText> = PathOrTextToPath<P>["_params"];
+type ExNoParams = Path<any, null | undefined | never>;
 type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
   infer P extends PathOrText,
   infer P2 extends PathOrText,
@@ -257,8 +259,17 @@ type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
       [
         Path<
           `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
-          PrepareParamsForMerge<PathOrTextToPath<P>["_params"]> &
-            PrepareParamsForMerge<PathOrTextToPath<P2>["_params"]>
+          ParamsOfPT<P> extends ExNoParams
+            ? ParamsOfPT<P2>
+            : ParamsOfPT<P2> extends ExNoParams
+            ? ParamsOfPT<P2>
+            : {
+                [K in keyof ParamsOfPT<P> | keyof ParamsOfPT<P2>]: K extends keyof ParamsOfPT<P2>
+                  ? ParamsOfPT<P2>[K]
+                  : K extends keyof ParamsOfPT<P>
+                  ? ParamsOfPT<P>[K]
+                  : never;
+              }
         >,
         ...Rest,
       ]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { concat, number, path, segment, string, text, textSegments } from "./definition";
+import { concat, number, parseNumber, path, segment, string, text, textSegments } from "./definition";
 
 describe("Path Definition", () => {
   describe("text", () => {
@@ -177,6 +177,22 @@ describe("Path Definition", () => {
 
       const description: typeof s["path"] = "/this-works";
       expect(s.path).toEqual(description);
+    });
+
+    it("can be nested", () => {
+      const p = segment(segment(segment(parseNumber("foo"))));
+      const descr: typeof p["path"] = "/:foo[number]";
+      expect(descr).toEqual(p.path);
+
+      expect(p.match("42")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {
+            "foo": 42,
+          },
+          "remaining": "",
+        }
+      `);
     });
   });
 

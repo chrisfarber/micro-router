@@ -22,10 +22,12 @@ const makeError = (descr?: string): MatchError =>
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-type NoParams = null;
+export type NoParams = null;
 export type ConstPath<P extends string = any> = Path<P, NoParams>;
-// kind of broken right now:
-type ParametricPath<P extends string = any, Params extends Record<string, unknown> = any> = Path<P, Params>;
+export type ParametricPath<
+  P extends string = any,
+  Params extends Record<string, unknown> = Record<string, unknown>,
+> = Path<P, Params>;
 
 type TextOptions = {
   /** defaults to false */
@@ -69,7 +71,8 @@ export const text = <T extends string>(text: T, options?: TextOptions): ConstPat
   };
 };
 
-type StringPath<K extends string> = Path<`:${K}`, Record<K, string>>;
+type StringPath<K extends string> = Path<`:${K}`, { [key in K]: string }>;
+
 /** A Path that consumes the input text into a param.
  * This matching occurs greedily; you can expect it to consume the entire path.
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
@@ -95,7 +98,7 @@ export const parseString = <K extends string>(key: K): StringPath<K> => {
 };
 
 const numberRegexp = /^(\d*\.?\d+)(.*)$/;
-type NumberPath<K extends string> = Path<`:${K}[number]`, Record<K, number>>;
+type NumberPath<K extends string> = Path<`:${K}[number]`, { [key in K]: number }>;
 /**
  * A path that succeeds if it can parse the beginning of the input as a base 10 number.
  *
@@ -130,7 +133,7 @@ export const parseNumber = <K extends string>(key: K): NumberPath<K> =>
     },
   } as NumberPath<K>);
 
-type Segment<P extends Path> = Path<`/${P["path"]}`, P["_params"]>;
+type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
 const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
 /**
  * A segment considers the contents between the start of the string (ignoring any initial path
@@ -180,21 +183,13 @@ export const string = <K extends string>(key: K) => segment(parseString(key));
  */
 export const number = <K extends string>(key: K) => segment(parseNumber(key));
 
-type PrepareParamsForMerge<P> = P extends null | undefined | never ? unknown : P;
+type MergeParams<L, R> = L extends NoParams ? R : R extends NoParams ? L : R & L;
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
   infer P2 extends Path,
   ...infer Rest extends Path[],
 ]
-  ? ConcatenatedPaths<
-      [
-        Path<
-          `${P["path"]}${P2["path"]}`,
-          PrepareParamsForMerge<P["_params"]> & PrepareParamsForMerge<P2["_params"]>
-        >,
-        ...Rest,
-      ]
-    >
+  ? ConcatenatedPaths<[Path<`${P["path"]}${P2["path"]}`, MergeParams<ParamsOf<P>, ParamsOf<P2>>>, ...Rest]>
   : Ps[0];
 /**
  * Combine many Path definitions with no separator.
@@ -249,7 +244,6 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string ? TextSegments<P> : P;
 type ParamsOfPT<P extends PathOrText> = PathOrTextToPath<P>["_params"];
-type ExNoParams = Path<any, null | undefined | never>;
 type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
   infer P extends PathOrText,
   infer P2 extends PathOrText,
@@ -259,10 +253,10 @@ type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
       [
         Path<
           `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
-          ParamsOfPT<P> extends ExNoParams
+          ParamsOfPT<P> extends NoParams
             ? ParamsOfPT<P2>
-            : ParamsOfPT<P2> extends ExNoParams
-            ? ParamsOfPT<P2>
+            : ParamsOfPT<P2> extends NoParams
+            ? ParamsOfPT<P>
             : {
                 [K in keyof ParamsOfPT<P> | keyof ParamsOfPT<P2>]: K extends keyof ParamsOfPT<P2>
                   ? ParamsOfPT<P2>[K]

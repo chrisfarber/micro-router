@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserHistory, Link, NavigatorProvider, match, bestMatch } from "../lib";
+import { bestMatch, BrowserHistory, Link, match, NavigatorProvider } from "../lib";
 import { number, path, string } from "../lib/definition";
 import "./App.css";
 import { Go } from "./Go";

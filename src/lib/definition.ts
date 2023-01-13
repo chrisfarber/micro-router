@@ -109,16 +109,31 @@ export const mapParams = <P extends Path, R extends ValidParams>(
   } as Path<any, R>;
 };
 
-type Rewrap<K extends string, P extends string> = `:${K}${P extends TypeIndicator<infer T>
+type WrapTypeIndicator<P extends string> = P extends TypeIndicator<infer T>
   ? T extends "string"
     ? ""
     : P
-  : `[${P}]`}`;
+  : TypeIndicator<P>;
+const typeIndicatorRegexp = /^\[?([^[\]]+)\]?$/;
+const wrap = (s: string): string => {
+  if (s === "[string]") return "";
+  const res = s.match(typeIndicatorRegexp);
+  if (!res) return `[${s}]`;
+  const [_, match] = res;
+  return `[${match}]`;
+};
+
+type Keyed<K extends string, P extends string> = `:${K}${WrapTypeIndicator<P>}`;
 export const keyAs = <K extends string, P extends Path>(
   key: K,
   path: P,
-): Path<Rewrap<K, PathOf<P>>, { [key in K]: ParamsOf<P> }> => {
-  return mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }) as Path;
+): Path<Keyed<K, PathOf<P>>, { [key in K]: ParamsOf<P> }> => {
+  const pathStr = `:${key}${wrap(path.path)}`;
+  return {
+    ...mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }),
+    path: pathStr as any,
+    _params: null as any,
+  } as Path;
 };
 
 /** A Path that consumes the input text into a param.

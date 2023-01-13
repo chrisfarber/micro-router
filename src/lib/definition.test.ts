@@ -136,6 +136,15 @@ describe("Path Definition", () => {
     });
   });
 
+  describe("keyAs", () => {
+    it("computes the path description", () => {
+      const p = keyAs("stuff", path("a", string("b")));
+
+      const descr: typeof p["path"] = ":stuff[/a/:b]";
+      expect(p.path).toEqual(descr);
+    });
+  });
+
   describe("concat", () => {
     const combined = concat(text("hello"), text("there"));
     it("combines simple text", () => {

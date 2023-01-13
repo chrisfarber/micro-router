@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   concat,
+  keyAs,
   mapParams,
   number,
   parseNumber,
@@ -227,7 +228,7 @@ describe("Path Definition", () => {
     });
 
     it("can be nested", () => {
-      const p = segment(segment(segment(parseNumber("foo"))));
+      const p = segment(segment(segment(keyAs("foo", parseNumber))));
       const descr: typeof p["path"] = "/:foo[number]";
       expect(descr).toEqual(p.path);
 

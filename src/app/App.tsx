@@ -113,10 +113,10 @@ function App() {
           <div>
             <ul>
               <li>
-                <Link to={BasePath}>{BasePath.make()}</Link>
+                <Link to={BasePath}>{BasePath.make(null)}</Link>
               </li>
               <li>
-                <Link to={MessagesPath}>{MessagesPath.make()}</Link>
+                <Link to={MessagesPath}>{MessagesPath.make(null)}</Link>
               </li>
               <li>
                 <Link to={MessageByIdPath} params={{ messageId: "4" }}>

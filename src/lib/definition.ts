@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type NoParams = null;
-export type ValidParams = NoParams | Record<string, unknown>;
+export type ValidParams = NoParams | Record<string, unknown> | string | number;
 export interface Path<Pathname extends string = any, Params extends ValidParams = any> {
   readonly path: Pathname;
   readonly _params: Params;
@@ -29,6 +29,8 @@ export type ParametricPath<
   P extends string = any,
   Params extends Record<string, unknown> = Record<string, unknown>,
 > = Path<P, Params>;
+
+export type TypeIndicator<T extends string> = `[${T}]`;
 
 type TextOptions = {
   /** defaults to false */
@@ -107,74 +109,71 @@ export const mapParams = <P extends Path, R extends ValidParams>(
   } as Path<any, R>;
 };
 
-const keyAs = <K extends string, P extends Path>(
+type Rewrap<K extends string, P extends string> = `:${K}${P extends TypeIndicator<infer T>
+  ? T extends "string"
+    ? ""
+    : P
+  : `[${P}]`}`;
+export const keyAs = <K extends string, P extends Path>(
   key: K,
   path: P,
-): Path<`:${K}${PathOf<P> extends "" ? "" : `[${PathOf<P>}]`}`, { [key in K]: ParamsOf<P> }> => {
+): Path<Rewrap<K, PathOf<P>>, { [key in K]: ParamsOf<P> }> => {
   return mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }) as Path;
 };
-
-type StringPath<K extends string> = Path<`:${K}`, { [key in K]: string }>;
 
 /** A Path that consumes the input text into a param.
  * This matching occurs greedily; you can expect it to consume the entire path.
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
  */
-export const parseString = <K extends string>(key: K): StringPath<K> => {
-  return {
-    _params: null as any,
-    path: `:${key}`,
-    match(input) {
-      if (input.length < 1) {
-        return makeError(`parseString for :${key} expected a non-empty input`);
-      }
-      return {
-        error: false,
-        params: { [key]: input },
-        remaining: "",
-      };
-    },
-    make(params) {
-      return params[key];
-    },
-  } as StringPath<K>;
+export const parseString: Path<TypeIndicator<"string">, string> = {
+  _params: null as any,
+  path: "[string]",
+  match(input) {
+    if (input.length < 1) {
+      return makeError(`[string] expected a non-empty input`);
+    }
+    return {
+      error: false,
+      params: input,
+      remaining: "",
+    };
+  },
+  make: s => s,
 };
 
 const numberRegexp = /^(\d*\.?\d+)(.*)$/;
-type NumberPath<K extends string> = Path<`:${K}[number]`, { [key in K]: number }>;
 /**
  * A path that succeeds if it can parse the beginning of the input as a base 10 number.
  *
  * Not greedy, unlike `parseString`. It is incompatible with leading slashes, however,
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
-export const parseNumber = <K extends string>(key: K): NumberPath<K> =>
-  ({
-    _params: null as any,
-    path: `:${key}[number]`,
-    match(input) {
-      const res = input.match(numberRegexp);
-      if (!res) {
-        return makeError(`input did not appear to be a number: "${input}"`);
-      }
-      const [_, nStr, rest] = res;
-      if (nStr === undefined || rest === undefined) {
-        return makeError("numberRegexp failed");
-      }
-      const num = Number(nStr);
-      if (isNaN(num)) {
-        return makeError(`parsed as NaN: "${nStr}"`);
-      }
-      return {
-        error: false,
-        params: { [key]: num } as Record<K, number>,
-        remaining: rest,
-      };
-    },
-    make(params) {
-      return `${params[key]}`;
-    },
-  } as NumberPath<K>);
+export const parseNumber: Path<TypeIndicator<"number">, number> = {
+  _params: null as any,
+  path: "[number]",
+  match(input) {
+    const res = input.match(numberRegexp);
+    if (!res) {
+      return makeError(`input did not appear to be a number: "${input}"`);
+    }
+    const [_, nStr, rest] = res;
+    if (nStr === undefined || rest === undefined) {
+      return makeError("numberRegexp failed");
+    }
+    const num = Number(nStr);
+    if (isNaN(num)) {
+      return makeError(`parsed as NaN: "${nStr}"`);
+    }
+    return {
+      error: false,
+      params: num,
+      remaining: rest,
+    };
+  },
+  make(params) {
+    return `${params}`;
+  },
+};
 
 type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
 const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
@@ -219,12 +218,12 @@ export const segment = <P extends Path>(inner: P): Segment<P> => {
  * A Path that, when matching, will consume a path segment as a string and capture it as the key
  * `key` of Params.
  */
-export const string = <K extends string>(key: K) => segment(parseString(key));
+export const string = <K extends string>(key: K) => segment(keyAs(key, parseString));
 /**
  * A Path that will consume a path segment and parse it as a number, capturing it as the key `key`
  * of Params.
  */
-export const number = <K extends string>(key: K) => segment(parseNumber(key));
+export const number = <K extends string>(key: K) => segment(keyAs(key, parseNumber));
 
 type MergeParams<L, R> = L extends NoParams ? R : R extends NoParams ? L : R & L;
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [

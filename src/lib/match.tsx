@@ -32,7 +32,7 @@ type MatchComponentProps = {
    */
   children?: ReactNode;
 };
-export type MatchComponent<P extends Path = Path> = {
+export type PathMatchComponent<P extends Path = Path> = {
   path: P;
   Matched: FC<ParamsOf<P>>;
 } & FC<MatchComponentProps>;
@@ -50,7 +50,7 @@ export type MatchComponent<P extends Path = Path> = {
 export const match = <P extends Path>(
   path: P,
   render: (params: ParamsOf<P>) => ReactElement | null,
-): MatchComponent<P> => {
+): PathMatchComponent<P> => {
   const Matched: FC<ParamsOf<P>> = render;
   Matched.displayName = `Match: ${path.path}`;
 
@@ -63,13 +63,13 @@ export const match = <P extends Path>(
   Outer.displayName = `Path: ${path.path}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Matcher: MatchComponent<P> = Outer as any;
+  const Matcher: PathMatchComponent<P> = Outer as any;
   Matcher.path = path;
   Matcher.Matched = Matched;
   return Matcher;
 };
 
-export type BestMatchOpts<Matches extends MatchComponent[]> = {
+export type BestMatchOpts<Matches extends PathMatchComponent[]> = {
   of: Matches;
   exact?: boolean;
   fallback?: ReactElement;
@@ -81,7 +81,7 @@ export type BestMatchOpts<Matches extends MatchComponent[]> = {
  * The best match is considered to be the one that has the least unmatched text at the end of the
  * browser's actual path.
  */
-export const bestMatch = <Matches extends MatchComponent[]>({
+export const bestMatch = <Matches extends PathMatchComponent[]>({
   of,
   exact,
   fallback,
@@ -90,7 +90,7 @@ export const bestMatch = <Matches extends MatchComponent[]>({
     const loc = useLocation();
     const { pathname } = loc;
     const matched = useMemo(() => {
-      let best: { Match: MatchComponent; result: MatchSuccess } | null = null;
+      let best: { Match: PathMatchComponent; result: MatchSuccess } | null = null;
       for (const Match of of) {
         const { path } = Match;
         const result = path.match(pathname);

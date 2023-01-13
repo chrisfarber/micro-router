@@ -1,52 +1,153 @@
 import { describe, expect, it } from "vitest";
-import { concat, number, parseNumber, path, segment, string, text, textSegments } from "./definition";
+import {
+  concat,
+  mapParams,
+  number,
+  parseNumber,
+  path,
+  segment,
+  string,
+  text,
+  textSegments,
+} from "./definition";
 
 describe("Path Definition", () => {
-  describe("text", () => {
-    it("matches strings", () => {
-      const part = text("hello");
-      const nomatch = part.match("fooey");
-      expect(nomatch.error).toBeTruthy();
+  describe("primitives", () => {
+    describe("text", () => {
+      it("matches strings", () => {
+        const part = text("hello");
+        const nomatch = part.match("fooey");
+        expect(nomatch.error).toBeTruthy();
 
-      const match = part.match("hellothere");
-      expect(match).toEqual({
-        error: false,
-        params: null,
-        remaining: "there",
+        const match = part.match("hellothere");
+        expect(match).toEqual({
+          error: false,
+          params: null,
+          remaining: "there",
+        });
+
+        expect(part.make(null)).toEqual("hello");
       });
 
-      expect(part.make()).toEqual("hello");
+      it("is case insensitive by default", () => {
+        const lc = text("lowercase");
+        const uc = text("LOWERCASE");
+
+        expect(lc.match("lowerCASE").error).toBeFalsy();
+        expect(uc.match("lowerCASE").error).toBeFalsy();
+        expect(uc.match("UPPERCASEuppercase").error).toBeTruthy();
+      });
+
+      it("can be made case sensitive", () => {
+        const uc = text("LOWERCASE", { caseSensitive: true });
+        expect(uc.match("LOWERCASE").error).toBeFalsy();
+        expect(uc.match("lowercaselowercase").error).toBeTruthy();
+        expect(uc.match("UPPERCASE").error).toBeTruthy();
+      });
     });
 
-    it("is case insensitive by default", () => {
-      const lc = text("lowercase");
-      const uc = text("LOWERCASE");
+    describe("string", () => {
+      it("parses text", () => {
+        const param = string("bluey");
+        const m1 = param.match("hello-there");
+        expect(m1).toEqual({
+          error: false,
+          params: { bluey: "hello-there" },
+          remaining: "",
+        });
 
-      expect(lc.match("lowerCASE").error).toBeFalsy();
-      expect(uc.match("lowerCASE").error).toBeFalsy();
-      expect(uc.match("UPPERCASEuppercase").error).toBeTruthy();
+        const m2 = param.match("hello49/other-stuff");
+        expect(m2).toEqual({
+          error: false,
+          params: { bluey: "hello49" },
+          remaining: "/other-stuff",
+        });
+      });
+
+      it("does not read past a path separator", () => {
+        const param = string("finn");
+        expect(param.match("yep/nope")).toMatchInlineSnapshot(`
+          {
+            "error": false,
+            "params": {
+              "finn": "yep",
+            },
+            "remaining": "/nope",
+          }
+        `);
+      });
     });
 
-    it("can be made case sensitive", () => {
-      const uc = text("LOWERCASE", { caseSensitive: true });
-      expect(uc.match("LOWERCASE").error).toBeFalsy();
-      expect(uc.match("lowercaselowercase").error).toBeTruthy();
-      expect(uc.match("UPPERCASE").error).toBeTruthy();
+    describe("number", () => {
+      it("parses numbers", () => {
+        const p = number("price");
+        expect(p.match("/19.99/")).toMatchInlineSnapshot(`
+          {
+            "error": false,
+            "params": {
+              "price": 19.99,
+            },
+            "remaining": "/",
+          }
+        `);
+
+        const desc: typeof p["path"] = "/:price[number]";
+        expect(p.path).toEqual(desc);
+
+        expect(p.make({ price: 100 })).toEqual("/100");
+        expect(p.make({ price: 100.0 })).toEqual("/100");
+        expect(p.make({ price: 4.2 })).toEqual("/4.2");
+      });
     });
   });
+
+  describe("mapParams", () => {
+    it("fails if the isomorphism throws an exception", () => {
+      const p = mapParams(string("a"), {
+        to(left) {
+          if (left.a === "bad") {
+            throw "bad input";
+          }
+          return { a: left.a.split("").reverse().join("") };
+        },
+        from(right) {
+          return { a: right.a.split("").reverse().join("") };
+        },
+      });
+      expect(p.match("/bad")).toMatchInlineSnapshot(`
+        {
+          "description": "mapParams failed: bad input",
+          "error": true,
+        }
+      `);
+
+      expect(p.match("/olleh")).toMatchInlineSnapshot(`
+        {
+          "error": false,
+          "params": {
+            "a": "hello",
+          },
+          "remaining": "",
+        }
+      `);
+
+      expect(p.make({ a: "wtf" })).toEqual("/ftw");
+    });
+  });
+
   describe("concat", () => {
     const combined = concat(text("hello"), text("there"));
     it("combines simple text", () => {
       const result = combined.match("hellotherefriend");
       expect(result).toEqual({
         error: false,
-        params: {},
+        params: null,
         remaining: "friend",
       });
     });
 
     it("makes a compound string", () => {
-      expect(combined.make()).toEqual("hellothere");
+      expect(combined.make(null)).toEqual("hellothere");
     });
 
     it("reports the part that errored", () => {
@@ -66,60 +167,6 @@ describe("Path Definition", () => {
       const path: typeof combined.path = "stuff/:foo";
       // ensure the runtime value matches the expected value:
       expect(combined.path).toEqual(path);
-    });
-  });
-
-  describe("string", () => {
-    it("parses text", () => {
-      const param = string("bluey");
-      const m1 = param.match("hello-there");
-      expect(m1).toEqual({
-        error: false,
-        params: { bluey: "hello-there" },
-        remaining: "",
-      });
-
-      const m2 = param.match("hello49/other-stuff");
-      expect(m2).toEqual({
-        error: false,
-        params: { bluey: "hello49" },
-        remaining: "/other-stuff",
-      });
-    });
-
-    it("does not read past a path separator", () => {
-      const param = string("finn");
-      expect(param.match("yep/nope")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": {
-            "finn": "yep",
-          },
-          "remaining": "/nope",
-        }
-      `);
-    });
-  });
-
-  describe("number", () => {
-    it("parses numbers", () => {
-      const p = number("price");
-      expect(p.match("/19.99/")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": {
-            "price": 19.99,
-          },
-          "remaining": "/",
-        }
-      `);
-
-      const desc: typeof p["path"] = "/:price[number]";
-      expect(p.path).toEqual(desc);
-
-      expect(p.make({ price: 100 })).toEqual("/100");
-      expect(p.make({ price: 100.0 })).toEqual("/100");
-      expect(p.make({ price: 4.2 })).toEqual("/4.2");
     });
   });
 

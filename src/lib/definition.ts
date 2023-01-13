@@ -2,11 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-export interface Path<Pathname extends string = any, Params = any> {
+export type NoParams = null;
+export type ValidParams = NoParams | Record<string, unknown>;
+export interface Path<Pathname extends string = any, Params extends ValidParams = any> {
   readonly path: Pathname;
   readonly _params: Params;
   match(input: string): MatchResult<Params>;
-  make: Params extends Record<string, any> ? (params: Params) => string : () => string;
+  make(params: Params): string;
 }
 
 export type ParamsOf<P extends Path> = P["_params"];
@@ -22,7 +24,6 @@ const makeError = (descr?: string): MatchError =>
 type StripLeadingSlash<S extends string> = S extends `/${infer R}` ? StripLeadingSlash<R> : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-export type NoParams = null;
 export type ConstPath<P extends string = any> = Path<P, NoParams>;
 export type ParametricPath<
   P extends string = any,
@@ -71,6 +72,48 @@ export const text = <T extends string>(text: T, options?: TextOptions): ConstPat
   };
 };
 
+type Isomorphism<L, R> = {
+  to: (left: L) => R;
+  from: (right: R) => L;
+};
+
+export type MappedPath<P extends Path, To extends ValidParams> = Path<PathOf<P>, To>;
+
+export const mapParams = <P extends Path, R extends ValidParams>(
+  path: P,
+  iso: Isomorphism<ParamsOf<P>, R>,
+): MappedPath<P, R> => {
+  return {
+    path: path.path,
+    _params: null as any,
+    match: input => {
+      const res = path.match(input);
+      if (res.error) {
+        return res;
+      }
+      try {
+        return {
+          ...res,
+          params: iso.to(res.params),
+        };
+      } catch (e) {
+        return {
+          error: true,
+          description: `mapParams failed: ${e}`,
+        };
+      }
+    },
+    make: params => path.make(iso.from(params)),
+  } as Path<any, R>;
+};
+
+const keyAs = <K extends string, P extends Path>(
+  key: K,
+  path: P,
+): Path<`:${K}${PathOf<P> extends "" ? "" : `[${PathOf<P>}]`}`, { [key in K]: ParamsOf<P> }> => {
+  return mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }) as Path;
+};
+
 type StringPath<K extends string> = Path<`:${K}`, { [key in K]: string }>;
 
 /** A Path that consumes the input text into a param.
@@ -87,7 +130,7 @@ export const parseString = <K extends string>(key: K): StringPath<K> => {
       }
       return {
         error: false,
-        params: { [key]: input } as Record<K, string>,
+        params: { [key]: input },
         remaining: "",
       };
     },
@@ -196,20 +239,22 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
  * Succeeds if all inner Paths succeed.
  * You probably want to use `path` instead.
  */
-export const concat = <Rs extends Path[]>(...parts: Rs): ConcatenatedPaths<Rs> => {
+export const concat = <Ps extends Path[]>(...parts: Ps): ConcatenatedPaths<Ps> => {
   const path: Path<any, any> = {
     _params: null as any,
     path: parts.map(r => r.path).join("") as any,
     match(input: string) {
       let remaining = input;
-      let params: Record<string, any> = {};
-      for (const r of parts) {
-        const matched = r.match(remaining);
+      let params: null | Record<string, any> = null;
+      for (const p of parts) {
+        const matched = p.match(remaining);
         if (matched.error) {
           return matched;
         }
         remaining = matched.remaining;
-        params = { ...params, ...matched.params };
+        if (matched.params !== null) {
+          params = { ...(params ?? {}), ...matched.params };
+        }
       }
       return { error: false, params, remaining };
     },
@@ -218,7 +263,7 @@ export const concat = <Rs extends Path[]>(...parts: Rs): ConcatenatedPaths<Rs> =
     },
   };
 
-  return path as ConcatenatedPaths<Rs>;
+  return path as ConcatenatedPaths<Ps>;
 };
 
 type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
@@ -243,13 +288,13 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string ? TextSegments<P> : P;
-type ParamsOfPT<P extends PathOrText> = PathOrTextToPath<P>["_params"];
-type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
+type ParamsOfPT<P extends PathOrText> = ParamsOf<PathOrTextToPath<P>>;
+type CombinedPath<Ps extends PathOrText[]> = Ps extends [
   infer P extends PathOrText,
   infer P2 extends PathOrText,
   ...infer Rest extends PathOrText[],
 ]
-  ? SegmentedPath<
+  ? CombinedPath<
       [
         Path<
           `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
@@ -278,7 +323,7 @@ type SegmentedPath<Ps extends PathOrText[]> = Ps extends [
  * The inputs can be other paths or literal strings. Any literal strings provided will be converted into
  * paths by use of the `textSegments` path constructor.
  */
-export const path = <Ps extends PathOrText[]>(...paths: Ps): SegmentedPath<Ps> => {
+export const path = <Ps extends PathOrText[]>(...paths: Ps): CombinedPath<Ps> => {
   if (paths.length < 1) return undefined as any;
   return concat(
     ...paths.map(part => {
@@ -287,5 +332,5 @@ export const path = <Ps extends PathOrText[]>(...paths: Ps): SegmentedPath<Ps> =
       }
       return part;
     }),
-  ) as SegmentedPath<Ps>;
+  ) as CombinedPath<Ps>;
 };

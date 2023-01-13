@@ -31,6 +31,7 @@ export type ParametricPath<
 > = Path<P, Params>;
 
 export type TypeIndicator<T extends string> = `[${T}]`;
+export type StringTypeIndicator = TypeIndicator<"string">;
 
 type TextOptions = {
   /** defaults to false */
@@ -74,6 +75,43 @@ export const text = <T extends string>(text: T, options?: TextOptions): ConstPat
   };
 };
 
+type MatchRegexpOpts<K extends string> = {
+  regexp: RegExp;
+  path?: K;
+};
+/**
+ * A path that will succeed if the provided regexp matches.
+ *
+ * The regexp must capture two groups:
+ * - the first group will be extracted as the string params
+ * - the second must be the remainder of the input path to process
+ */
+export const matchRegexp = <P extends string = StringTypeIndicator>({
+  regexp,
+  path: key,
+}: MatchRegexpOpts<P>): Path<P, string> => {
+  return {
+    _params: null as any,
+    path: key ?? ("[string]" as any),
+    match(input) {
+      const res = input.match(regexp);
+      if (!res) {
+        return makeError(`regexp (${regexp}) did not match: "${input}"`);
+      }
+      const [_, str, rest] = res;
+      if (str === undefined || rest === undefined) {
+        return makeError(`regexp ${regexp} failed to yield two capture groups from: "${input}"`);
+      }
+      return {
+        error: false,
+        params: str,
+        remaining: rest,
+      };
+    },
+    make: s => s,
+  };
+};
+
 type Isomorphism<L, R> = {
   to: (left: L) => R;
   from: (right: R) => L;
@@ -101,7 +139,7 @@ export const mapParams = <P extends Path, R extends ValidParams>(
       } catch (e) {
         return {
           error: true,
-          description: `mapParams failed: ${e}`,
+          description: `${e}`,
         };
       }
     },
@@ -136,62 +174,39 @@ export const keyAs = <K extends string, P extends Path>(
   } as Path;
 };
 
-/** A Path that consumes the input text into a param.
+/**
+ * A Path that consumes the input text into a param.
  * This matching occurs greedily; you can expect it to consume the entire path.
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
  */
-export const parseString: Path<TypeIndicator<"string">, string> = {
-  _params: null as any,
-  path: "[string]",
-  match(input) {
-    if (input.length < 1) {
-      return makeError(`[string] expected a non-empty input`);
-    }
-    return {
-      error: false,
-      params: input,
-      remaining: "",
-    };
-  },
-  make: s => s,
-};
+export const parseString: Path<StringTypeIndicator, string> = matchRegexp({ regexp: /^(.+)($)/ });
 
-const numberRegexp = /^(\d*\.?\d+)(.*)$/;
 /**
  * A path that succeeds if it can parse the beginning of the input as a base 10 number.
  *
  * Not greedy, unlike `parseString`. It is incompatible with leading slashes, however,
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
-export const parseNumber: Path<TypeIndicator<"number">, number> = {
-  _params: null as any,
-  path: "[number]",
-  match(input) {
-    const res = input.match(numberRegexp);
-    if (!res) {
-      return makeError(`input did not appear to be a number: "${input}"`);
-    }
-    const [_, nStr, rest] = res;
-    if (nStr === undefined || rest === undefined) {
-      return makeError("numberRegexp failed");
-    }
-    const num = Number(nStr);
-    if (isNaN(num)) {
-      return makeError(`parsed as NaN: "${nStr}"`);
-    }
-    return {
-      error: false,
-      params: num,
-      remaining: rest,
-    };
+export const parseNumber: Path<TypeIndicator<"number">, number> = mapParams(
+  matchRegexp({
+    path: "[number]" as const,
+    regexp: /^(\d*\.?\d+)(.*)$/,
+  }),
+  {
+    to(left) {
+      const num = Number(left);
+      if (isNaN(num)) {
+        throw `input parsed as NaN: "${left}"`;
+      }
+      return num;
+    },
+    from(right) {
+      return `${right}`;
+    },
   },
-  make(params) {
-    return `${params}`;
-  },
-};
+);
 
 type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
-const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
 /**
  * A segment considers the contents between the start of the string (ignoring any initial path
  * separator) and the first encountered path separator ("/").
@@ -199,35 +214,26 @@ const segmentRegexp = /^\/?([^/]*)($|\/.*)/;
  * The resulting Path will fail if the inner path does not consume the entire first path segment, or
  * if the first path segment is empty. Otherwise, it succeeds if the inner Path succeeds.
  */
-export const segment = <P extends Path>(inner: P): Segment<P> => {
-  return {
-    _params: null as any,
-    path: `/${inner.path}` as any,
-    match(input) {
-      const res = input.match(segmentRegexp);
-      if (!res) {
-        return makeError(`input did not appear to be a path segment: "${input}"`);
-      }
-      const [_, str, rest] = res;
-      if (str === undefined || rest === undefined) {
-        return makeError(`segment regexp failed`);
-      }
-      const innerMatch = inner.match(str);
-      if (innerMatch.error) {
-        return innerMatch;
-      }
-      if (innerMatch.remaining !== "") {
-        return makeError(
-          `segment text "${str}" matched the inner path, but had unused input "${innerMatch.remaining}"`,
-        );
-      }
-      return { ...innerMatch, remaining: rest };
+export const segment = <P extends Path>(inner: P): Segment<P> =>
+  mapParams(
+    matchRegexp({
+      path: `/${inner.path}` as LeadingSlash<PathOf<P>>,
+      regexp: /^\/?([^/]*)($|\/.*)/,
+    }),
+    {
+      to(left) {
+        const innerMatch = inner.match(left);
+        if (innerMatch.error) {
+          throw innerMatch.description ?? "??";
+        }
+        if (innerMatch.remaining !== "") {
+          throw `segment text "${left}" matched the inner path, but had unused input "${innerMatch.remaining}"`;
+        }
+        return innerMatch.params;
+      },
+      from: right => `/${inner.make(right)}`,
     },
-    make(params) {
-      return `/${inner.make(params)}`;
-    },
-  } as Segment<P>;
-};
+  );
 
 /**
  * A Path that, when matching, will consume a path segment as a string and capture it as the key

@@ -117,7 +117,7 @@ describe("Path Definition", () => {
       });
       expect(p.match("/bad")).toMatchInlineSnapshot(`
         {
-          "description": "mapParams failed: bad input",
+          "description": "bad input",
           "error": true,
         }
       `);

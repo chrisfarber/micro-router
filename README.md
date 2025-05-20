@@ -1,4 +1,4 @@
-# route-f
+# micro-router
 
 An experimental, TypeScript-first routing library for React.
 

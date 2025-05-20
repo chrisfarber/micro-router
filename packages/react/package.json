@@ -1,0 +1,42 @@
+{
+  "name": "@micro-router/react",
+  "description": "a small, strongly-typed router for React",
+  "version": "0.0.0.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "pnpm run /^lint:[^:]*$/",
+    "lint:eslint": "eslint",
+    "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
+    "test": "vitest run",
+    "build": "vite build",
+    "dev": "vite dev"
+  },
+  "peerDependencies": {
+    "@micro-router/core": "workspace:^",
+    "@micro-router/history": "workspace:^",
+    "react": "18 || 19",
+    "react-dom": "18 || 19"
+  },
+  "devDependencies": {
+    "@micro-router/core": "workspace:^",
+    "@micro-router/history": "workspace:^",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react-swc": "^3.8.0",
+    "rollup-plugin-visualizer": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-dts": "catalog:",
+    "vitest": "catalog:"
+  }
+}

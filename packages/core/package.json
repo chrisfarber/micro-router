@@ -1,0 +1,33 @@
+{
+  "name": "@micro-router/core",
+  "description": "a combinator library for defining, matching, and extracting data from paths",
+  "version": "0.0.0",
+  "author": {
+    "name": "Chris Farber",
+    "email": "chris@chrisfarber.net"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "pnpm run /^lint:[^:]*$/",
+    "lint:eslint": "eslint",
+    "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
+    "test": "vitest run",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vite-plugin-dts": "catalog:"
+  }
+}

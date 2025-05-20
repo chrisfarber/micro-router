@@ -1,11 +1,11 @@
-# Add files here to ignore them from prettier formatting
-
-tmp
-
 # Generated files
-dist/*
-coverage/*
-node_modules/*
+dist
+coverage
+node_modules
+
+pnpm-lock.yaml
+
+*.tsbuildinfo
 
 # VSCode
 .vscode/*

@@ -236,6 +236,13 @@ export const parseNumber: Path<TypeIndicator<"number">, number> = mapParams(
   },
 );
 
+const ensureLeadingSlash = <S extends string>(s: S): LeadingSlash<S> => {
+  if (s.startsWith("/")) {
+    return s as LeadingSlash<S>;
+  }
+  return `/${s}` as LeadingSlash<S>;
+};
+
 type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
 /**
  * A segment considers the contents between the start of the string (ignoring any initial path
@@ -247,7 +254,7 @@ type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
 export const segment = <P extends Path>(inner: P): Segment<P> =>
   mapParams(
     matchRegexp({
-      path: `/${inner.path}` as LeadingSlash<PathOf<P>>,
+      path: ensureLeadingSlash(inner.path) as LeadingSlash<PathOf<P>>,
       regexp: /^\/?([^/]*)($|\/.*)/,
     }),
     {

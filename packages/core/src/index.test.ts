@@ -180,8 +180,7 @@ describe("Path Definition", () => {
   });
 
   describe("segment", () => {
-    // TODO
-    it.skip("succeeds if the segment is entirely consumed by the inner path", () => {
+    it("succeeds if the segment is entirely consumed by the inner path", () => {
       const s = segment(text("this-works"));
       expect(s).toBeDefined();
       expect(s.match("this-works")).toMatchInlineSnapshot(`
@@ -201,7 +200,7 @@ describe("Path Definition", () => {
       `);
       expect(s.match("this-work")).toMatchInlineSnapshot(`
         {
-          "description": "expected \\"this-works\\", found: \\"this-work\\"",
+          "description": "Error: expected "this-works", found: "this-work"",
           "error": true,
         }
       `);
@@ -221,7 +220,7 @@ describe("Path Definition", () => {
       `);
       expect(s.match("/this-works-oops")).toMatchInlineSnapshot(`
         {
-          "description": "segment text \\"this-works-oops\\" matched the inner path, but had unused input \\"-oops\\"",
+          "description": "Error: segment text "this-works-oops" matched the inner path, but had unused input "-oops"",
           "error": true,
         }
       `);
@@ -236,8 +235,7 @@ describe("Path Definition", () => {
       expect(s.path).toEqual(description);
     });
 
-    // TODO
-    it.skip("can be nested", () => {
+    it("can be nested", () => {
       const p = segment(segment(segment(keyAs("foo", parseNumber))));
       const descr: (typeof p)["path"] = "/:foo[number]";
       expect(descr).toEqual(p.path);

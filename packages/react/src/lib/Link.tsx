@@ -31,8 +31,13 @@ export const Link = <P extends Path | string>(props: LinkProps<P>) => {
   }, [path, params]);
   const onClick = useCallback(
     (e: MouseEvent) => {
-      e.preventDefault();
-      nav.push(href);
+      const defaulting = !e.defaultPrevented;
+      const leftClick = e.button === 0;
+      const modifiers = e.metaKey || e.altKey || e.ctrlKey || e.shiftKey;
+      if (defaulting && leftClick && !modifiers) {
+        e.preventDefault();
+        nav.push(href);
+      }
     },
     [href, nav],
   );

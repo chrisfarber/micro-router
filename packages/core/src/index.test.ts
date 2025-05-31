@@ -107,7 +107,7 @@ describe("Path Definition", () => {
       const p = mapParams(string("a"), {
         to(left) {
           if (left.a === "bad") {
-            throw "bad input";
+            throw new Error("bad input");
           }
           return { a: left.a.split("").reverse().join("") };
         },
@@ -115,12 +115,11 @@ describe("Path Definition", () => {
           return { a: right.a.split("").reverse().join("") };
         },
       });
-      expect(p.match("/bad")).toMatchInlineSnapshot(`
-        {
-          "description": "bad input",
-          "error": true,
-        }
-      `);
+      const matchErr = p.match("/bad");
+      expect(matchErr).toMatchObject({
+        description: `Error: bad input`,
+        error: true,
+      });
 
       expect(p.match("/olleh")).toMatchInlineSnapshot(`
         {
@@ -311,6 +310,7 @@ describe("Path Definition", () => {
 
   describe("path", () => {
     it("defines successfully", () => {
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const blank = path();
       expect(blank).toBeUndefined();
 

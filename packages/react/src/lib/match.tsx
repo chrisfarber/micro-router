@@ -21,6 +21,7 @@ const usePathMatch = <P extends Path>(
 ): [true, ParamsOf<P>] | [false, null] => {
   const { exact } = opts ?? {};
   const loc = useLocation();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const [matches, params] = useMemo(() => {
     const match = path.match(loc.pathname);
     if (match.error || (exact && !exactMatch(match))) {
@@ -70,8 +71,7 @@ export const match = <P extends Path>(
   };
   Outer.displayName = `Path: ${path.path}`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Matcher: PathMatchComponent<P> = Outer as any;
+  const Matcher = Outer as PathMatchComponent<P>;
   Matcher.path = path;
   Matcher.Matched = Matched;
   return Matcher;
@@ -119,6 +119,6 @@ export const bestMatch = <Matches extends PathMatchComponent[]>({
     }, [pathname]);
     return matched;
   };
-  BestMatch.displayName = `${exact ? "Exact" : "Best"} match of ${of.length}`;
+  BestMatch.displayName = `${exact ? "Exact" : "Best"} match of ${of.length.toFixed(0)}`;
   return BestMatch;
 };

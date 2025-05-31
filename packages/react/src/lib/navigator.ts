@@ -9,12 +9,10 @@ export interface INavigator {
 
   go(offset: number): void;
 
-  push(path: string): void;
-  push<P extends ConstPath>(path: P): void;
+  push(path: string | ConstPath): void;
   push<P extends Path>(path: P, params: ParamsOf<P>): void;
 
-  replace(path: string): void;
-  replace<P extends ConstPath>(path: P): void;
+  replace(path: string | ConstPath): void;
   replace<P extends Path>(path: P, params: ParamsOf<P>): void;
 }
 
@@ -26,7 +24,9 @@ export class Navigator implements INavigator {
   private _stop: StopListening | null = null;
   start() {
     this.stop();
-    this._stop = this.history.observe(l => this._observe(l));
+    this._stop = this.history.observe(l => {
+      this._observe(l);
+    });
   }
 
   stop() {
@@ -72,7 +72,9 @@ export class Navigator implements INavigator {
   }
 
   private notify() {
-    this.listeners.forEach(l => l(this._location));
+    this.listeners.forEach(l => {
+      l(this._location);
+    });
   }
 
   private updateAndNotify() {

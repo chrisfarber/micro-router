@@ -15,7 +15,7 @@
   "scripts": {
     "typecheck": "tsc -b",
     "lint": "pnpm run /^lint:[^:]*$/",
-    "lint:eslint": "eslint",
+    "lint:eslint": "eslint --max-warnings=0",
     "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
     "test": "vitest run",
     "build": "vite build",

@@ -9,6 +9,7 @@ import {
   segment,
   string,
   text,
+  textEnum,
   textSegments,
 } from ".";
 
@@ -44,6 +45,40 @@ describe("Path Definition", () => {
         expect(uc.match("LOWERCASE").error).toBeFalsy();
         expect(uc.match("lowercaselowercase").error).toBeTruthy();
         expect(uc.match("UPPERCASE").error).toBeTruthy();
+      });
+    });
+
+    describe("textEnum", () => {
+      it("matches and errors as expected", () => {
+        const nums = textEnum("one", "two", "three");
+        expect(nums.match("one")).toEqual({
+          error: false,
+          params: "one",
+          remaining: "",
+        });
+
+        expect(nums.match("twoooo")).toEqual({
+          error: false,
+          params: "two",
+          remaining: "ooo",
+        });
+
+        expect(nums.match("through")).toMatchObject({
+          error: true,
+        });
+      });
+
+      it("errors when provided a string that is not one of its options", () => {
+        const nums = textEnum("one", "two", "three");
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        expect(() => nums.make("four" as any)).toThrowError(
+          "Invalid value for textEnum: four",
+        );
+      });
+
+      it("makes a valid path description", () => {
+        const nums = textEnum("one", "two", "three");
+        expect(nums.path).toEqual("(one|two|three)");
       });
     });
 

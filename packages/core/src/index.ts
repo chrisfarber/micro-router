@@ -95,6 +95,62 @@ export const text = <T extends string>(
   };
 };
 
+/**
+ * Combine an array of string literals into a single string literal, separated by the provided separator.
+ */
+export type JoinStringTypes<
+  Vs extends readonly string[],
+  Sep extends string,
+> = Vs extends readonly [
+  infer A extends string,
+  infer B extends string,
+  ...infer Rest extends string[],
+]
+  ? JoinStringTypes<[`${A}${Sep}${B}`, ...Rest], Sep>
+  : Vs extends [infer A extends string]
+    ? A
+    : "";
+
+/**
+ * A primitive that will succeed if the path being matched against is exactly one of the provided string literals.
+ * The params will be the matched string value.
+ *
+ * @param values An array or tuple of allowed string values.
+ * @returns A Path that matches any of the provided values and returns the matched value as params.
+ */
+export function textEnum<const T extends readonly string[]>(
+  ...values: T
+): Path<`(${JoinStringTypes<T, "|">})`, T[number]> {
+  const set = new Set(values);
+  const pathStr = `(${values.join("|")})` as `(${JoinStringTypes<T, "|">})`;
+  return {
+    _params: null as any,
+    path: pathStr,
+    match(input) {
+      for (const v of set) {
+        if (input.startsWith(v)) {
+          return {
+            error: false,
+            params: v as T[number],
+            remaining: input.substring(v.length),
+          };
+        }
+      }
+      return makeError(
+        `expected one of [${values.join(", ")}], found: "${input}"`,
+      );
+    },
+    make(param) {
+      if (!set.has(param)) {
+        throw new Error(
+          `Invalid value for textEnum: ${String(param)}. Allowed: [${values.join(", ")}].`,
+        );
+      }
+      return param;
+    },
+  };
+}
+
 type MatchRegexpOpts<K extends string> = {
   regexp: RegExp;
   path?: K;

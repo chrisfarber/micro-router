@@ -1,10 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 export type NoParams = null;
 export type ValidParams = NoParams | Record<string, unknown> | string | number;
 export interface Path<
-  Pathname extends string = any,
+  Pathname extends string = string,
   Params extends ValidParams = any,
 > {
   readonly path: Pathname;
@@ -35,9 +38,9 @@ type StripLeadingSlash<S extends string> = S extends `/${infer R}`
   : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-export type ConstPath<P extends string = any> = Path<P, NoParams>;
+export type ConstPath<P extends string = string> = Path<P, NoParams>;
 export type ParametricPath<
-  P extends string = any,
+  P extends string = string,
   Params extends Record<string, unknown> = Record<string, unknown>,
 > = Path<P, Params>;
 
@@ -113,12 +116,12 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
     match(input) {
       const res = input.match(regexp);
       if (!res) {
-        return makeError(`regexp (${regexp}) did not match: "${input}"`);
+        return makeError(`regexp (${regexp.source}) did not match: "${input}"`);
       }
       const [_, str, rest] = res;
       if (str === undefined || rest === undefined) {
         return makeError(
-          `regexp ${regexp} failed to yield two capture groups from: "${input}"`,
+          `regexp ${regexp.source} failed to yield two capture groups from: "${input}"`,
         );
       }
       return {
@@ -161,12 +164,14 @@ export const mapParams = <P extends Path, R extends ValidParams>(
       } catch (e) {
         return {
           error: true,
+          // TODO consider adding a cause field to the MatchError type
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           description: `${e}`,
         };
       }
     },
     make: params => path.make(iso.from(params)),
-  } as Path<any, R>;
+  } satisfies MappedPath<P, R>;
 };
 
 type WrapTypeIndicator<P extends string> =
@@ -181,7 +186,7 @@ const wrap = (s: string): string => {
   const res = s.match(typeIndicatorRegexp);
   if (!res) return `[${s}]`;
   const [_, match] = res;
-  return `[${match}]`;
+  return `[${match ?? ""}]`;
 };
 
 type Keyed<K extends string, P extends string> = `:${K}${WrapTypeIndicator<P>}`;
@@ -189,12 +194,12 @@ export const keyAs = <K extends string, P extends Path>(
   key: K,
   path: P,
 ): Path<Keyed<K, PathOf<P>>, { [key in K]: ParamsOf<P> }> => {
-  const pathStr = `:${key}${wrap(path.path)}`;
+  const pathStr = `:${key}${wrap(path.path)}` as const;
   return {
     ...mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }),
     path: pathStr as any,
     _params: null as any,
-  } as Path;
+  } as Path<any>;
 };
 
 /**
@@ -221,12 +226,12 @@ export const parseNumber: Path<TypeIndicator<"number">, number> = mapParams(
     to(left) {
       const num = Number(left);
       if (isNaN(num)) {
-        throw `input parsed as NaN: "${left}"`;
+        throw new Error(`input parsed as NaN: "${left}"`);
       }
       return num;
     },
     from(right) {
-      return `${right}`;
+      return right.toString();
     },
   },
 );
@@ -249,10 +254,12 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
       to(left) {
         const innerMatch = inner.match(left);
         if (innerMatch.error) {
-          throw innerMatch.description ?? "??";
+          throw new Error(innerMatch.description ?? "??");
         }
         if (innerMatch.remaining !== "") {
-          throw `segment text "${left}" matched the inner path, but had unused input "${innerMatch.remaining}"`;
+          throw new Error(
+            `segment text "${left}" matched the inner path, but had unused input "${innerMatch.remaining}"`,
+          );
         }
         return innerMatch.params;
       },
@@ -301,7 +308,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
 export const concat = <Ps extends Path[]>(
   ...parts: Ps
 ): ConcatenatedPaths<Ps> => {
-  const path: Path<any, any> = {
+  const path = {
     _params: null as any,
     path: parts.map(r => r.path).join("") as any,
     match(input: string) {
@@ -322,9 +329,9 @@ export const concat = <Ps extends Path[]>(
     make(params) {
       return parts.map(r => r.make(params)).join("");
     },
-  };
+  } as ConcatenatedPaths<Ps>;
 
-  return path as ConcatenatedPaths<Ps>;
+  return path;
 };
 
 type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
@@ -344,7 +351,7 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
       .split("/")
       .filter(part => part !== "")
       .map(part => segment(text(part))),
-  ) as Path;
+  ) as TextSegments<T>;
 };
 
 type PathOrText = Path | string;

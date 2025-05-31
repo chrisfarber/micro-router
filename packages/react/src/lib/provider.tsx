@@ -28,7 +28,9 @@ export const NavigatorProvider: FC<PropsWithChildren<{ history: History }>> = ({
   const navigator = useMemo(() => new Navigator(history), [history]);
   useEffect(() => {
     navigator.start();
-    return () => navigator.stop();
+    return () => {
+      navigator.stop();
+    };
   }, [navigator]);
   return (
     <NavigatorContext.Provider value={navigator}>

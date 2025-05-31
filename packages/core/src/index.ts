@@ -30,6 +30,17 @@ export type MatchSuccess<P = any> = {
 };
 export type MatchResult<P = any> = MatchError | MatchSuccess<P>;
 
+export const makePath = <Pathname extends string, Params extends ValidParams>(
+  path: Pathname,
+  match: (input: string) => MatchResult<Params>,
+  make: (params: Params) => string,
+): Path<Pathname, Params> => ({
+  _params: null as any,
+  path,
+  match,
+  make,
+});
+
 const makeError = (descr?: string): MatchError =>
   descr ? { error: true, description: descr } : { error: true };
 
@@ -72,14 +83,13 @@ export const text = <T extends string>(
   options?: TextOptions,
 ): ConstPath<T> => {
   const caseSensitive = options?.caseSensitive;
-  const match = (
+  const matchFn = (
     caseSensitive ? matchTextCaseSensitive : matchTextCaseInsensitive
   )(text);
-  return {
-    _params: null as any,
-    path: text,
-    match(input) {
-      if (match(input)) {
+  return makePath(
+    text,
+    input => {
+      if (matchFn(input)) {
         return {
           error: false,
           params: null,
@@ -89,10 +99,8 @@ export const text = <T extends string>(
         return makeError(`expected "${text}", found: "${input}"`);
       }
     },
-    make() {
-      return text;
-    },
-  };
+    () => text,
+  );
 };
 
 /**
@@ -123,10 +131,9 @@ export function textEnum<const T extends readonly string[]>(
 ): Path<`(${JoinStringTypes<T, "|">})`, T[number]> {
   const set = new Set(values);
   const pathStr = `(${values.join("|")})` as `(${JoinStringTypes<T, "|">})`;
-  return {
-    _params: null as any,
-    path: pathStr,
-    match(input) {
+  return makePath(
+    pathStr,
+    input => {
       for (const v of set) {
         if (input.startsWith(v)) {
           return {
@@ -140,7 +147,7 @@ export function textEnum<const T extends readonly string[]>(
         `expected one of [${values.join(", ")}], found: "${input}"`,
       );
     },
-    make(param) {
+    param => {
       if (!set.has(param)) {
         throw new Error(
           `Invalid value for textEnum: ${String(param)}. Allowed: [${values.join(", ")}].`,
@@ -148,7 +155,7 @@ export function textEnum<const T extends readonly string[]>(
       }
       return param;
     },
-  };
+  );
 }
 
 type MatchRegexpOpts<K extends string> = {
@@ -166,10 +173,9 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
   regexp,
   path: key,
 }: MatchRegexpOpts<P>): Path<P, string> => {
-  return {
-    _params: null as any,
-    path: key ?? ("[string]" as any),
-    match(input) {
+  return makePath(
+    key ?? ("[string]" as any),
+    input => {
       const res = input.match(regexp);
       if (!res) {
         return makeError(`regexp (${regexp.source}) did not match: "${input}"`);
@@ -186,8 +192,8 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
         remaining: rest,
       };
     },
-    make: s => s,
-  };
+    s => s,
+  );
 };
 
 type Isomorphism<L, R> = {
@@ -204,10 +210,9 @@ export const mapParams = <P extends Path, R extends ValidParams>(
   path: P,
   iso: Isomorphism<ParamsOf<P>, R>,
 ): MappedPath<P, R> => {
-  return {
-    path: path.path,
-    _params: null as any,
-    match: input => {
+  return makePath<PathOf<P>, R>(
+    path.path,
+    input => {
       const res = path.match(input);
       if (res.error) {
         return res;
@@ -226,8 +231,8 @@ export const mapParams = <P extends Path, R extends ValidParams>(
         };
       }
     },
-    make: params => path.make(iso.from(params)),
-  } satisfies MappedPath<P, R>;
+    params => path.make(iso.from(params)),
+  );
 };
 
 type WrapTypeIndicator<P extends string> =
@@ -254,7 +259,6 @@ export const keyAs = <K extends string, P extends Path>(
   return {
     ...mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }),
     path: pathStr as any,
-    _params: null as any,
   } as Path<any>;
 };
 
@@ -372,7 +376,6 @@ export const concat = <Ps extends Path[]>(
   ...parts: Ps
 ): ConcatenatedPaths<Ps> => {
   const path = {
-    _params: null as any,
     path: parts.map(r => r.path).join("") as any,
     match(input: string) {
       let remaining = input;

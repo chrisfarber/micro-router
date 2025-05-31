@@ -7,8 +7,12 @@ const DEFAULT_LOCATION: Location = {
 };
 
 const parsePath = (path: string): Location => {
-  // TODO actually implement this.
-  return { ...DEFAULT_LOCATION, pathname: path };
+  const url = new URL(path, "http://base");
+  return {
+    pathname: url.pathname,
+    search: url.search,
+    hash: url.hash,
+  };
 };
 
 const parsePathOrLoc = (pathOrLoc: string | Location): Location => {

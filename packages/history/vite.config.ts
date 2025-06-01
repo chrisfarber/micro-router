@@ -13,5 +13,5 @@ export default defineConfig({
     },
     minify: false,
   },
-  plugins: [dts({ tsconfigPath: "./tsconfig.lib.json" })],
+  plugins: [dts({ tsconfigPath: "./tsconfig.lib.json", rollupTypes: true })],
 });

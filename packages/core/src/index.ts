@@ -21,7 +21,7 @@ export type PathOf<P extends Path> = P["path"];
 
 export type MatchError = {
   readonly error: true;
-  readonly description?: string;
+  readonly cause?: Error;
 };
 export type MatchSuccess<P = any> = {
   readonly error: false;
@@ -41,8 +41,10 @@ export const makePath = <Pathname extends string, Params extends ValidParams>(
   make,
 });
 
-const makeError = (descr?: string): MatchError =>
-  descr ? { error: true, description: descr } : { error: true };
+export const makeError = (cause?: Error): MatchError => ({
+  error: true,
+  cause,
+});
 
 type StripLeadingSlash<S extends string> = S extends `/${infer R}`
   ? StripLeadingSlash<R>
@@ -96,7 +98,7 @@ export const text = <T extends string>(
           remaining: input.substring(text.length),
         };
       } else {
-        return makeError(`expected "${text}", found: "${input}"`);
+        return makeError(new Error(`expected "${text}", found: "${input}"`));
       }
     },
     () => text,
@@ -122,9 +124,6 @@ export type JoinStringTypes<
 /**
  * A primitive that will succeed if the path being matched against is exactly one of the provided string literals.
  * The params will be the matched string value.
- *
- * @param values An array or tuple of allowed string values.
- * @returns A Path that matches any of the provided values and returns the matched value as params.
  */
 export function textEnum<const T extends readonly string[]>(
   ...values: T
@@ -144,7 +143,7 @@ export function textEnum<const T extends readonly string[]>(
         }
       }
       return makeError(
-        `expected one of [${values.join(", ")}], found: "${input}"`,
+        new Error(`expected one of [${values.join(", ")}], found: "${input}"`),
       );
     },
     param => {
@@ -178,12 +177,16 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
     input => {
       const res = input.match(regexp);
       if (!res) {
-        return makeError(`regexp (${regexp.source}) did not match: "${input}"`);
+        return makeError(
+          new Error(`regexp (${regexp.source}) did not match: "${input}"`),
+        );
       }
       const [_, str, rest] = res;
       if (str === undefined || rest === undefined) {
         return makeError(
-          `regexp ${regexp.source} failed to yield two capture groups from: "${input}"`,
+          new Error(
+            `regexp ${regexp.source} failed to yield two capture groups from: "${input}"`,
+          ),
         );
       }
       return {
@@ -223,12 +226,7 @@ export const mapParams = <P extends Path, R extends ValidParams>(
           params: iso.to(res.params),
         };
       } catch (e) {
-        return {
-          error: true,
-          // TODO consider adding a cause field to the MatchError type
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          description: `${e}`,
-        };
+        return makeError(e instanceof Error ? e : new Error(String(e)));
       }
     },
     params => path.make(iso.from(params)),
@@ -321,7 +319,7 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
       to(left) {
         const innerMatch = inner.match(left);
         if (innerMatch.error) {
-          throw new Error(innerMatch.description ?? "??");
+          throw innerMatch.cause ?? new Error("??");
         }
         if (innerMatch.remaining !== "") {
           throw new Error(

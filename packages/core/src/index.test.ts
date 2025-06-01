@@ -152,8 +152,8 @@ describe("Path Definition", () => {
       });
       const matchErr = p.match("/bad");
       expect(matchErr).toMatchObject({
-        description: `Error: bad input`,
         error: true,
+        cause: new Error("bad input"),
       });
 
       expect(p.match("/olleh")).toMatchInlineSnapshot(`
@@ -195,13 +195,13 @@ describe("Path Definition", () => {
     });
 
     it("reports the part that errored", () => {
-      expect(combined.match("other stuff")).toEqual({
+      expect(combined.match("other stuff")).toMatchObject({
         error: true,
-        description: `expected "hello", found: "other stuff"`,
+        cause: new Error('expected "hello", found: "other stuff"'),
       });
-      expect(combined.match("hellostuff")).toEqual({
+      expect(combined.match("hellostuff")).toMatchObject({
         error: true,
-        description: `expected "there", found: "stuff"`,
+        cause: new Error('expected "there", found: "stuff"'),
       });
     });
 
@@ -235,7 +235,7 @@ describe("Path Definition", () => {
       `);
       expect(s.match("this-work")).toMatchInlineSnapshot(`
         {
-          "description": "Error: expected "this-works", found: "this-work"",
+          "cause": [Error: expected "this-works", found: "this-work"],
           "error": true,
         }
       `);
@@ -255,7 +255,7 @@ describe("Path Definition", () => {
       `);
       expect(s.match("/this-works-oops")).toMatchInlineSnapshot(`
         {
-          "description": "Error: segment text "this-works-oops" matched the inner path, but had unused input "-oops"",
+          "cause": [Error: segment text "this-works-oops" matched the inner path, but had unused input "-oops"],
           "error": true,
         }
       `);

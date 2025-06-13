@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   concat,
   keyAs,
-  mapParams,
+  mapData,
   number,
   parseNumber,
   path,
@@ -19,12 +19,12 @@ describe("Path Definition", () => {
       it("matches strings", () => {
         const part = text("hello");
         const nomatch = part.match("fooey");
-        expect(nomatch.error).toBeTruthy();
+        expect(nomatch.ok).toBeFalsy();
 
         const match = part.match("hellothere");
         expect(match).toEqual({
-          error: false,
-          params: null,
+          ok: true,
+          data: null,
           remaining: "there",
         });
 
@@ -35,16 +35,16 @@ describe("Path Definition", () => {
         const lc = text("lowercase");
         const uc = text("LOWERCASE");
 
-        expect(lc.match("lowerCASE").error).toBeFalsy();
-        expect(uc.match("lowerCASE").error).toBeFalsy();
-        expect(uc.match("UPPERCASEuppercase").error).toBeTruthy();
+        expect(lc.match("lowerCASE").ok).toBeTruthy();
+        expect(uc.match("lowerCASE").ok).toBeTruthy();
+        expect(uc.match("UPPERCASEuppercase").ok).toBeFalsy();
       });
 
       it("can be made case sensitive", () => {
         const uc = text("LOWERCASE", { caseSensitive: true });
-        expect(uc.match("LOWERCASE").error).toBeFalsy();
-        expect(uc.match("lowercaselowercase").error).toBeTruthy();
-        expect(uc.match("UPPERCASE").error).toBeTruthy();
+        expect(uc.match("LOWERCASE").ok).toBeTruthy();
+        expect(uc.match("lowercaselowercase").ok).toBeFalsy();
+        expect(uc.match("UPPERCASE").ok).toBeFalsy();
       });
     });
 
@@ -52,19 +52,19 @@ describe("Path Definition", () => {
       it("matches and errors as expected", () => {
         const nums = textEnum("one", "two", "three");
         expect(nums.match("one")).toEqual({
-          error: false,
-          params: "one",
+          ok: true,
+          data: "one",
           remaining: "",
         });
 
         expect(nums.match("twoooo")).toEqual({
-          error: false,
-          params: "two",
+          ok: true,
+          data: "two",
           remaining: "ooo",
         });
 
         expect(nums.match("through")).toMatchObject({
-          error: true,
+          ok: false,
         });
       });
 
@@ -87,45 +87,41 @@ describe("Path Definition", () => {
         const param = string("bluey");
         const m1 = param.match("hello-there");
         expect(m1).toEqual({
-          error: false,
-          params: { bluey: "hello-there" },
+          ok: true,
+          data: { bluey: "hello-there" },
           remaining: "",
         });
 
         const m2 = param.match("hello49/other-stuff");
         expect(m2).toEqual({
-          error: false,
-          params: { bluey: "hello49" },
+          ok: true,
+          data: { bluey: "hello49" },
           remaining: "/other-stuff",
         });
       });
 
       it("does not read past a path separator", () => {
         const param = string("finn");
-        expect(param.match("yep/nope")).toMatchInlineSnapshot(`
-          {
-            "error": false,
-            "params": {
-              "finn": "yep",
-            },
-            "remaining": "/nope",
-          }
-        `);
+        expect(param.match("yep/nope")).toMatchObject({
+          ok: true,
+          data: {
+            finn: "yep",
+          },
+          remaining: "/nope",
+        });
       });
     });
 
     describe("number", () => {
       it("parses numbers", () => {
         const p = number("price");
-        expect(p.match("/19.99/")).toMatchInlineSnapshot(`
-          {
-            "error": false,
-            "params": {
-              "price": 19.99,
-            },
-            "remaining": "/",
-          }
-        `);
+        expect(p.match("/19.99/")).toMatchObject({
+          ok: true,
+          data: {
+            price: 19.99,
+          },
+          remaining: "/",
+        });
 
         const desc: (typeof p)["path"] = "/:price[number]";
         expect(p.path).toEqual(desc);
@@ -137,9 +133,9 @@ describe("Path Definition", () => {
     });
   });
 
-  describe("mapParams", () => {
+  describe("mapData", () => {
     it("fails if the isomorphism throws an exception", () => {
-      const p = mapParams(string("a"), {
+      const p = mapData(string("a"), {
         to(left) {
           if (left.a === "bad") {
             throw new Error("bad input");
@@ -152,19 +148,17 @@ describe("Path Definition", () => {
       });
       const matchErr = p.match("/bad");
       expect(matchErr).toMatchObject({
-        error: true,
+        ok: false,
         cause: new Error("bad input"),
       });
 
-      expect(p.match("/olleh")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": {
-            "a": "hello",
-          },
-          "remaining": "",
-        }
-      `);
+      expect(p.match("/olleh")).toMatchObject({
+        ok: true,
+        data: {
+          a: "hello",
+        },
+        remaining: "",
+      });
 
       expect(p.make({ a: "wtf" })).toEqual("/ftw");
     });
@@ -184,8 +178,8 @@ describe("Path Definition", () => {
     it("combines simple text", () => {
       const result = combined.match("hellotherefriend");
       expect(result).toEqual({
-        error: false,
-        params: null,
+        ok: true,
+        data: null,
         remaining: "friend",
       });
     });
@@ -196,11 +190,11 @@ describe("Path Definition", () => {
 
     it("reports the part that errored", () => {
       expect(combined.match("other stuff")).toMatchObject({
-        error: true,
+        ok: false,
         cause: new Error('expected "hello", found: "other stuff"'),
       });
       expect(combined.match("hellostuff")).toMatchObject({
-        error: true,
+        ok: false,
         cause: new Error('expected "there", found: "stuff"'),
       });
     });
@@ -218,51 +212,41 @@ describe("Path Definition", () => {
     it("succeeds if the segment is entirely consumed by the inner path", () => {
       const s = segment(text("this-works"));
       expect(s).toBeDefined();
-      expect(s.match("this-works")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": null,
-          "remaining": "",
-        }
-      `);
+      expect(s.match("this-works")).toMatchObject({
+        ok: true,
+        data: null,
+        remaining: "",
+      });
 
-      expect(s.match("this-works")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": null,
-          "remaining": "",
-        }
-      `);
-      expect(s.match("this-work")).toMatchInlineSnapshot(`
-        {
-          "cause": [Error: expected "this-works", found: "this-work"],
-          "error": true,
-        }
-      `);
-      expect(s.match("/this-works")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": null,
-          "remaining": "",
-        }
-      `);
-      expect(s.match("/this-works/")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": null,
-          "remaining": "/",
-        }
-      `);
-      expect(s.match("/this-works-oops")).toMatchInlineSnapshot(`
-        {
-          "cause": [Error: segment text "this-works-oops" matched the inner path, but had unused input "-oops"],
-          "error": true,
-        }
-      `);
+      expect(s.match("this-works")).toMatchObject({
+        ok: true,
+        data: null,
+        remaining: "",
+      });
+      expect(s.match("this-work")).toMatchObject({
+        cause: new Error('expected "this-works", found: "this-work"'),
+        ok: false,
+      });
+      expect(s.match("/this-works")).toMatchObject({
+        ok: true,
+        data: null,
+        remaining: "",
+      });
+      expect(s.match("/this-works/")).toMatchObject({
+        ok: true,
+        data: null,
+        remaining: "/",
+      });
+      expect(s.match("/this-works-oops")).toMatchObject({
+        cause: new Error(
+          'segment text "this-works-oops" matched the inner path, but had unused input "-oops"',
+        ),
+        ok: false,
+      });
 
       expect(s.match("/this-works/too")).toEqual({
-        error: false,
-        params: null,
+        ok: true,
+        data: null,
         remaining: "/too",
       });
 
@@ -275,15 +259,13 @@ describe("Path Definition", () => {
       const descr: (typeof p)["path"] = "/:foo[number]";
       expect(descr).toEqual(p.path);
 
-      expect(p.match("42")).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": {
-            "foo": 42,
-          },
-          "remaining": "",
-        }
-      `);
+      expect(p.match("42")).toMatchObject({
+        ok: true,
+        data: {
+          foo: 42,
+        },
+        remaining: "",
+      });
     });
   });
 
@@ -299,22 +281,22 @@ describe("Path Definition", () => {
       const path = textSegments(
         "/bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker/",
       );
-      expect(path.match("/bird-seed").error).toBeTruthy();
+      expect(path.match("/bird-seed").ok).toBeFalsy();
       expect(
         path.match(
           "/bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker/",
-        ).error,
-      ).toBeFalsy();
+        ).ok,
+      ).toBeTruthy();
       expect(
         path.match(
           "bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker",
-        ).error,
-      ).toBeFalsy();
+        ).ok,
+      ).toBeTruthy();
       expect(
         path.match(
           "/bird-seed/tap-shoes/glittery-shoes/candy/spicy-chips/speaker-easy",
-        ).error,
-      ).toBeTruthy();
+        ).ok,
+      ).toBeFalsy();
     });
   });
 
@@ -325,14 +307,14 @@ describe("Path Definition", () => {
       textSegments("/from"),
       string("from"),
     );
-    it("generates with params", () => {
+    it("generates with data", () => {
       expect(path.make({ from: "bob", person: "alice" })).toEqual(
         "/hello/alice/from/bob",
       );
 
       expect(path.match("/hello/alice/from/bob")).toEqual({
-        error: false,
-        params: {
+        ok: true,
+        data: {
           from: "bob",
           person: "alice",
         },
@@ -349,7 +331,7 @@ describe("Path Definition", () => {
 
       const notBlank = path("l/hello");
       expect(notBlank).toBeDefined();
-      expect(notBlank.match("/l/hello/bye").error).toBeFalsy();
+      expect(notBlank.match("/l/hello/bye").ok).toBeTruthy();
     });
 
     it("matches and generates on a complex example", () => {
@@ -359,16 +341,14 @@ describe("Path Definition", () => {
 
       expect(p.make({ c: "sea", f: "eph" })).toEqual("/a/b/sea/d/e/eph");
       const match = p.match("/a/B/SEE/d/E/FFFFF/geee");
-      expect(match).toMatchInlineSnapshot(`
-        {
-          "error": false,
-          "params": {
-            "c": "SEE",
-            "f": "FFFFF",
-          },
-          "remaining": "/geee",
-        }
-      `);
+      expect(match).toMatchObject({
+        ok: true,
+        data: {
+          c: "SEE",
+          f: "FFFFF",
+        },
+        remaining: "/geee",
+      });
     });
   });
 });

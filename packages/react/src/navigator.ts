@@ -1,4 +1,4 @@
-import type { ConstPath, ParamsOf, Path } from "@micro-router/core";
+import type { ConstPath, DataOf, Path } from "@micro-router/core";
 import type { History, Location } from "@micro-router/history";
 
 type Listener = (l: Location) => void;
@@ -10,10 +10,10 @@ export interface INavigator {
   go(offset: number): void;
 
   push(path: string | ConstPath): void;
-  push<P extends Path>(path: P, params: ParamsOf<P>): void;
+  push<P extends Path>(path: P, params: DataOf<P>): void;
 
   replace(path: string | ConstPath): void;
-  replace<P extends Path>(path: P, params: ParamsOf<P>): void;
+  replace<P extends Path>(path: P, params: DataOf<P>): void;
 }
 
 export class Navigator implements INavigator {

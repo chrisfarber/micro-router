@@ -432,7 +432,7 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string
-  ? TextSegments<P>
+  ? Path<LeadingSlash<P>, NoParams>
   : P;
 type ParamsOfPT<P extends PathOrText> = ParamsOf<PathOrTextToPath<P>>;
 type CombinedPath<Ps extends PathOrText[]> = Ps extends [

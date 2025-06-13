@@ -19,7 +19,7 @@ export interface Path<
 export type DataOf<P extends Path> = P["_data"];
 export type PathOf<P extends Path> = P["path"];
 
-export type MatchError = {
+export type MatchFailure = {
   readonly ok: false;
   readonly cause?: Error;
 };
@@ -28,7 +28,7 @@ export type MatchSuccess<P = any> = {
   readonly data: P;
   readonly remaining: string;
 };
-export type MatchResult<P = any> = MatchError | MatchSuccess<P>;
+export type MatchResult<P = any> = MatchFailure | MatchSuccess<P>;
 
 /* @__NO_SIDE_EFFECTS__ */
 export const makePath = <Pathname extends string, Data extends ValidData>(
@@ -43,7 +43,7 @@ export const makePath = <Pathname extends string, Data extends ValidData>(
 });
 
 /* @__NO_SIDE_EFFECTS__ */
-export const makeError = (cause?: Error): MatchError => ({
+export const makeFailure = (cause?: Error): MatchFailure => ({
   ok: false,
   cause,
 });
@@ -101,7 +101,7 @@ export const text = <T extends string>(
           remaining: input.substring(text.length),
         };
       } else {
-        return makeError(new Error(`expected "${text}", found: "${input}"`));
+        return makeFailure(new Error(`expected "${text}", found: "${input}"`));
       }
     },
     () => text,
@@ -146,7 +146,7 @@ export function textEnum<const T extends readonly string[]>(
           };
         }
       }
-      return makeError(
+      return makeFailure(
         new Error(`expected one of [${values.join(", ")}], found: "${input}"`),
       );
     },
@@ -182,13 +182,13 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
     input => {
       const res = input.match(regexp);
       if (!res) {
-        return makeError(
+        return makeFailure(
           new Error(`regexp (${regexp.source}) did not match: "${input}"`),
         );
       }
       const [_, str, rest] = res;
       if (str === undefined || rest === undefined) {
-        return makeError(
+        return makeFailure(
           new Error(
             `regexp ${regexp.source} failed to yield two capture groups from: "${input}"`,
           ),
@@ -232,7 +232,7 @@ export const mapData = <P extends Path, R extends ValidData>(
           data: iso.to(res.data),
         };
       } catch (e) {
-        return makeError(e instanceof Error ? e : new Error(String(e)));
+        return makeFailure(e instanceof Error ? e : new Error(String(e)));
       }
     },
     data => path.make(iso.from(data)),
@@ -255,6 +255,19 @@ const wrap = (s: string): string => {
 };
 
 type Keyed<K extends string, P extends string> = `:${K}${WrapTypeIndicator<P>}`;
+/**
+ * Creates a new Path that maps the params of the given `path` to an object with a single key.
+ *
+ * This is useful for assigning a name to a path parameter, so that the matched value is returned
+ * as an object with the specified key, rather than as a raw value.
+ *
+ * For example, `keyAs("id", parseNumber)` will produce a Path that matches a number and returns
+ * `{ id: number }` as params.
+ *
+ * @param key The name to assign to the matched parameter.
+ * @param path The Path whose params will be wrapped under the given key.
+ * @returns A new Path with params as an object keyed by `key`.
+ */
 /* @__NO_SIDE_EFFECTS__ */
 export const keyAs = <K extends string, P extends Path>(
   key: K,
@@ -358,6 +371,21 @@ export const number = <K extends string>(key: K) =>
   segment(keyAs(key, parseNumber));
 
 type MergeData<L, R> = L extends NoData ? R : R extends NoData ? L : R & L;
+type MergeParams<L, R> = L extends NoData ? R : R extends NoData ? L : R & L;
+/**
+ * Matches a single path segment against a set of allowed string literals.
+ * Returns params as { [key]: value } if matched.
+ *
+ * Example:
+ *   const color = enumSegment({ key: "color", options: ["red", "blue", "green"] });
+ *   color.match("/red") // { success: true, params: { color: "red" }, ... }
+ */
+export function enumSegment<
+  const K extends string,
+  const T extends readonly string[],
+>(args: { key: K; options: T }) {
+  return segment(keyAs(args.key, textEnum(...args.options)));
+}
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
   infer P2 extends Path,

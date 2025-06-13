@@ -30,6 +30,7 @@ export type MatchSuccess<P = any> = {
 };
 export type MatchResult<P = any> = MatchError | MatchSuccess<P>;
 
+/* @__NO_SIDE_EFFECTS__ */
 export const makePath = <Pathname extends string, Params extends ValidParams>(
   path: Pathname,
   match: (input: string) => MatchResult<Params>,
@@ -41,6 +42,7 @@ export const makePath = <Pathname extends string, Params extends ValidParams>(
   make,
 });
 
+/* @__NO_SIDE_EFFECTS__ */
 export const makeError = (cause?: Error): MatchError => ({
   error: true,
   cause,
@@ -80,6 +82,7 @@ const matchTextCaseInsensitive = (text: string) => {
  * A primitive that will succeed if the path being matched against starts with the provided `text`.
  * Any additional text in the input string will not affect the match.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const text = <T extends string>(
   text: T,
   options?: TextOptions,
@@ -125,6 +128,7 @@ export type JoinStringTypes<
  * A primitive that will succeed if the path being matched against is exactly one of the provided string literals.
  * The params will be the matched string value.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export function textEnum<const T extends readonly string[]>(
   ...values: T
 ): Path<`(${JoinStringTypes<T, "|">})`, T[number]> {
@@ -168,6 +172,7 @@ type MatchRegexpOpts<K extends string> = {
  * - the first group will be extracted as the string params
  * - the second must be the remainder of the input path to process
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const matchRegexp = <P extends string = StringTypeIndicator>({
   regexp,
   path: key,
@@ -209,6 +214,7 @@ export type MappedPath<P extends Path, To extends ValidParams> = Path<
   To
 >;
 
+/* @__NO_SIDE_EFFECTS__ */
 export const mapParams = <P extends Path, R extends ValidParams>(
   path: P,
   iso: Isomorphism<ParamsOf<P>, R>,
@@ -249,6 +255,7 @@ const wrap = (s: string): string => {
 };
 
 type Keyed<K extends string, P extends string> = `:${K}${WrapTypeIndicator<P>}`;
+/* @__NO_SIDE_EFFECTS__ */
 export const keyAs = <K extends string, P extends Path>(
   key: K,
   path: P,
@@ -265,6 +272,7 @@ export const keyAs = <K extends string, P extends Path>(
  * This matching occurs greedily; you can expect it to consume the entire path.
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const parseString: Path<StringTypeIndicator, string> = matchRegexp({
   regexp: /^(.+)($)/,
 });
@@ -275,6 +283,7 @@ export const parseString: Path<StringTypeIndicator, string> = matchRegexp({
  * Not greedy, unlike `parseString`. It is incompatible with leading slashes, however,
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const parseNumber: Path<TypeIndicator<"number">, number> = mapParams(
   matchRegexp({
     path: "[number]" as const,
@@ -309,6 +318,7 @@ type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
  * The resulting Path will fail if the inner path does not consume the entire first path segment, or
  * if the first path segment is empty. Otherwise, it succeeds if the inner Path succeeds.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const segment = <P extends Path>(inner: P): Segment<P> =>
   mapParams(
     matchRegexp({
@@ -336,12 +346,14 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
  * A Path that, when matching, will consume a path segment as a string and capture it as the key
  * `key` of Params.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const string = <K extends string>(key: K) =>
   segment(keyAs(key, parseString));
 /**
  * A Path that will consume a path segment and parse it as a number, capturing it as the key `key`
  * of Params.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const number = <K extends string>(key: K) =>
   segment(keyAs(key, parseNumber));
 
@@ -370,12 +382,13 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
  * Succeeds if all inner Paths succeed.
  * You probably want to use `path` instead.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const concat = <Ps extends Path[]>(
   ...parts: Ps
 ): ConcatenatedPaths<Ps> => {
-  const path = {
-    path: parts.map(r => r.path).join("") as any,
-    match(input: string) {
+  return makePath(
+    parts.map(r => r.path).join("") as any,
+    input => {
       let remaining = input;
       let params: null | Record<string, any> = null;
       for (const p of parts) {
@@ -390,12 +403,10 @@ export const concat = <Ps extends Path[]>(
       }
       return { error: false, params, remaining };
     },
-    make(params) {
+    params => {
       return parts.map(r => r.make(params)).join("");
     },
-  } as ConcatenatedPaths<Ps>;
-
-  return path;
+  ) as ConcatenatedPaths<Ps>;
 };
 
 type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
@@ -407,6 +418,7 @@ type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
  * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
  * @returns
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const textSegments = <T extends string>(path: T): TextSegments<T> => {
   // although kind of elegant, if this proves to be a performance bottleneck, I should refactor this
   // to simply be a single text match + a check that we've consumed the end of the current segment.
@@ -459,6 +471,7 @@ type CombinedPath<Ps extends PathOrText[]> = Ps extends [
  * The inputs can be other paths or literal strings. Any literal strings provided will be converted into
  * paths by use of the `textSegments` path constructor.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const path = <Ps extends PathOrText[]>(
   ...paths: Ps
 ): CombinedPath<Ps> => {

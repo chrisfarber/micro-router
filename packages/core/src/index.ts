@@ -83,7 +83,7 @@ const matchTextCaseInsensitive = (text: string) => {
  * Any additional text in the input string will not affect the match.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const text = <T extends string>(
+export const matchText = <T extends string>(
   text: T,
   options?: TextOptions,
 ): ConstPath<T> => {
@@ -129,7 +129,7 @@ export type JoinStringTypes<
  * The data will be the matched string value.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export function textEnum<const T extends readonly string[]>(
+export function matchTextEnum<const T extends readonly string[]>(
   ...values: T
 ): Path<`(${JoinStringTypes<T, "|">})`, T[number]> {
   const set = new Set(values);
@@ -153,7 +153,7 @@ export function textEnum<const T extends readonly string[]>(
     data => {
       if (!set.has(data)) {
         throw new Error(
-          `Invalid value for textEnum: ${data}. Allowed: [${values.join(", ")}].`,
+          `Invalid value for matchTextEnum: ${data}. Allowed: [${values.join(", ")}].`,
         );
       }
       return data;
@@ -286,7 +286,7 @@ export const keyAs = <K extends string, P extends Path>(
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const parseString: Path<StringTypeIndicator, string> = matchRegexp({
+export const matchString: Path<StringTypeIndicator, string> = matchRegexp({
   regexp: /^(.+)($)/,
 });
 
@@ -297,7 +297,7 @@ export const parseString: Path<StringTypeIndicator, string> = matchRegexp({
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const parseNumber: Path<TypeIndicator<"number">, number> = mapData(
+export const matchNumber: Path<TypeIndicator<"number">, number> = mapData(
   matchRegexp({
     path: "[number]" as const,
     regexp: /^(\d*\.?\d+)(.*)$/,
@@ -361,14 +361,14 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const string = <K extends string>(key: K) =>
-  segment(keyAs(key, parseString));
+  segment(keyAs(key, matchString));
 /**
  * A Path that will consume a path segment and parse it as a number, capturing it as the key `key`
  * of Data.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const number = <K extends string>(key: K) =>
-  segment(keyAs(key, parseNumber));
+  segment(keyAs(key, matchNumber));
 
 type MergeData<L, R> = L extends NoData ? R : R extends NoData ? L : R & L;
 type MergeParams<L, R> = L extends NoData ? R : R extends NoData ? L : R & L;
@@ -377,14 +377,14 @@ type MergeParams<L, R> = L extends NoData ? R : R extends NoData ? L : R & L;
  * Returns params as { [key]: value } if matched.
  *
  * Example:
- *   const color = enumSegment({ key: "color", options: ["red", "blue", "green"] });
+ *   const color = textEnum({ key: "color", options: ["red", "blue", "green"] });
  *   color.match("/red") // { success: true, params: { color: "red" }, ... }
  */
-export function enumSegment<
+export function textEnum<
   const K extends string,
   const T extends readonly string[],
 >(args: { key: K; options: T }) {
-  return segment(keyAs(args.key, textEnum(...args.options)));
+  return segment(keyAs(args.key, matchTextEnum(...args.options)));
 }
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
@@ -447,7 +447,7 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
     ...path
       .split("/")
       .filter(part => part !== "")
-      .map(part => segment(text(part))),
+      .map(part => segment(matchText(part))),
   ) as TextSegments<T>;
 };
 

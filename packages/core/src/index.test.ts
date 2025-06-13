@@ -11,6 +11,8 @@ import {
   text,
   textEnum,
   textSegments,
+  enumSegment,
+  parseString,
 } from ".";
 
 describe("Path Definition", () => {
@@ -129,6 +131,70 @@ describe("Path Definition", () => {
         expect(p.make({ price: 100 })).toEqual("/100");
         expect(p.make({ price: 100.0 })).toEqual("/100");
         expect(p.make({ price: 4.2 })).toEqual("/4.2");
+      });
+    });
+
+    describe("enumSegment", () => {
+      it("matches allowed values as a segment and returns keyed params", () => {
+        const color = enumSegment({
+          key: "color",
+          options: ["red", "blue", "green"],
+        });
+        expect(color.match("/red")).toEqual({
+          ok: true,
+          data: { color: "red" },
+          remaining: "",
+        });
+        expect(color.match("/blue/other")).toEqual({
+          ok: true,
+          data: { color: "blue" },
+          remaining: "/other",
+        });
+        expect(color.match("/green")).toEqual({
+          ok: true,
+          data: { color: "green" },
+          remaining: "",
+        });
+      });
+
+      it("does not match disallowed values", () => {
+        const color = enumSegment({
+          key: "color",
+          options: ["red", "blue", "green"],
+        });
+        expect(color.match("/yellow")).toMatchObject({
+          ok: false,
+        });
+        expect(color.match("/")).toMatchObject({
+          ok: false,
+        });
+      });
+
+      it("makes a valid path description", () => {
+        const color = enumSegment({
+          key: "color",
+          options: ["red", "blue", "green"],
+        });
+        const desc: (typeof color)["path"] = "/:color[(red|blue|green)]";
+        expect(color.path).toEqual(desc);
+      });
+
+      it("generates a path from params", () => {
+        const color = enumSegment({
+          key: "color",
+          options: ["red", "blue", "green"],
+        });
+        expect(color.make({ color: "red" })).toEqual("/red");
+        expect(color.make({ color: "blue" })).toEqual("/blue");
+      });
+
+      it("throws if making a path with an invalid value", () => {
+        const color = enumSegment({
+          key: "color",
+          options: ["red", "blue", "green"],
+        });
+        // @ts-expect-error intentionally providing a disallowed input
+        expect(() => color.make({ color: "yellow" })).toThrow();
       });
     });
   });
@@ -264,6 +330,16 @@ describe("Path Definition", () => {
         data: {
           foo: 42,
         },
+        remaining: "",
+      });
+    });
+
+    it("doesn't need slashes", () => {
+      const p = segment(parseString);
+
+      expect(p.match("hello")).toMatchObject({
+        ok: true,
+        data: "hello",
         remaining: "",
       });
     });

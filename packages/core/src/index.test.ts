@@ -4,22 +4,22 @@ import {
   keyAs,
   mapData,
   number,
-  parseNumber,
+  matchNumber,
   path,
   segment,
   string,
-  text,
-  textEnum,
+  matchText,
+  matchTextEnum,
   textSegments,
-  enumSegment,
-  parseString,
+  textEnum,
+  matchString,
 } from ".";
 
 describe("Path Definition", () => {
   describe("primitives", () => {
-    describe("text", () => {
+    describe("matchText", () => {
       it("matches strings", () => {
-        const part = text("hello");
+        const part = matchText("hello");
         const nomatch = part.match("fooey");
         expect(nomatch.ok).toBeFalsy();
 
@@ -34,8 +34,8 @@ describe("Path Definition", () => {
       });
 
       it("is case insensitive by default", () => {
-        const lc = text("lowercase");
-        const uc = text("LOWERCASE");
+        const lc = matchText("lowercase");
+        const uc = matchText("LOWERCASE");
 
         expect(lc.match("lowerCASE").ok).toBeTruthy();
         expect(uc.match("lowerCASE").ok).toBeTruthy();
@@ -43,16 +43,16 @@ describe("Path Definition", () => {
       });
 
       it("can be made case sensitive", () => {
-        const uc = text("LOWERCASE", { caseSensitive: true });
+        const uc = matchText("LOWERCASE", { caseSensitive: true });
         expect(uc.match("LOWERCASE").ok).toBeTruthy();
         expect(uc.match("lowercaselowercase").ok).toBeFalsy();
         expect(uc.match("UPPERCASE").ok).toBeFalsy();
       });
     });
 
-    describe("textEnum", () => {
+    describe("matchTextEnum", () => {
       it("matches and errors as expected", () => {
-        const nums = textEnum("one", "two", "three");
+        const nums = matchTextEnum("one", "two", "three");
         expect(nums.match("one")).toEqual({
           ok: true,
           data: "one",
@@ -71,15 +71,15 @@ describe("Path Definition", () => {
       });
 
       it("errors when provided a string that is not one of its options", () => {
-        const nums = textEnum("one", "two", "three");
+        const nums = matchTextEnum("one", "two", "three");
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
         expect(() => nums.make("four" as any)).toThrowError(
-          "Invalid value for textEnum: four",
+          "Invalid value for matchTextEnum: four",
         );
       });
 
       it("makes a valid path description", () => {
-        const nums = textEnum("one", "two", "three");
+        const nums = matchTextEnum("one", "two", "three");
         expect(nums.path).toEqual("(one|two|three)");
       });
     });
@@ -134,9 +134,9 @@ describe("Path Definition", () => {
       });
     });
 
-    describe("enumSegment", () => {
+    describe("textEnum", () => {
       it("matches allowed values as a segment and returns keyed params", () => {
-        const color = enumSegment({
+        const color = textEnum({
           key: "color",
           options: ["red", "blue", "green"],
         });
@@ -158,7 +158,7 @@ describe("Path Definition", () => {
       });
 
       it("does not match disallowed values", () => {
-        const color = enumSegment({
+        const color = textEnum({
           key: "color",
           options: ["red", "blue", "green"],
         });
@@ -171,7 +171,7 @@ describe("Path Definition", () => {
       });
 
       it("makes a valid path description", () => {
-        const color = enumSegment({
+        const color = textEnum({
           key: "color",
           options: ["red", "blue", "green"],
         });
@@ -180,7 +180,7 @@ describe("Path Definition", () => {
       });
 
       it("generates a path from params", () => {
-        const color = enumSegment({
+        const color = textEnum({
           key: "color",
           options: ["red", "blue", "green"],
         });
@@ -189,7 +189,7 @@ describe("Path Definition", () => {
       });
 
       it("throws if making a path with an invalid value", () => {
-        const color = enumSegment({
+        const color = textEnum({
           key: "color",
           options: ["red", "blue", "green"],
         });
@@ -240,7 +240,7 @@ describe("Path Definition", () => {
   });
 
   describe("concat", () => {
-    const combined = concat(text("hello"), text("there"));
+    const combined = concat(matchText("hello"), matchText("there"));
     it("combines simple text", () => {
       const result = combined.match("hellotherefriend");
       expect(result).toEqual({
@@ -266,7 +266,7 @@ describe("Path Definition", () => {
     });
 
     it("constructs a valid path at runtime", () => {
-      const combined = concat(text("stuff"), string("foo"));
+      const combined = concat(matchText("stuff"), string("foo"));
       // ensure the expected value matches the type:
       const path: typeof combined.path = "stuff/:foo";
       // ensure the runtime value matches the expected value:
@@ -276,7 +276,7 @@ describe("Path Definition", () => {
 
   describe("segment", () => {
     it("succeeds if the segment is entirely consumed by the inner path", () => {
-      const s = segment(text("this-works"));
+      const s = segment(matchText("this-works"));
       expect(s).toBeDefined();
       expect(s.match("this-works")).toMatchObject({
         ok: true,
@@ -321,7 +321,7 @@ describe("Path Definition", () => {
     });
 
     it("can be nested", () => {
-      const p = segment(segment(segment(keyAs("foo", parseNumber))));
+      const p = segment(segment(segment(keyAs("foo", matchNumber))));
       const descr: (typeof p)["path"] = "/:foo[number]";
       expect(descr).toEqual(p.path);
 
@@ -335,7 +335,7 @@ describe("Path Definition", () => {
     });
 
     it("doesn't need slashes", () => {
-      const p = segment(parseString);
+      const p = segment(matchString);
 
       expect(p.match("hello")).toMatchObject({
         ok: true,
@@ -383,7 +383,7 @@ describe("Path Definition", () => {
       textSegments("/from"),
       string("from"),
     );
-    it("generates with data", () => {
+    it("generates with params", () => {
       expect(path.make({ from: "bob", person: "alice" })).toEqual(
         "/hello/alice/from/bob",
       );

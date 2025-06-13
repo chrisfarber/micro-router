@@ -4,39 +4,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-export type NoParams = null;
-export type ValidParams = NoParams | Record<string, unknown> | string | number;
+export type NoData = null;
+export type ValidData = NoData | Record<string, unknown> | string | number;
 export interface Path<
   Pathname extends string = string,
-  Params extends ValidParams = any,
+  Data extends ValidData = any,
 > {
   readonly path: Pathname;
-  readonly _params: Params;
-  match(input: string): MatchResult<Params>;
-  make(params: Params): string;
+  readonly _data: Data;
+  match(input: string): MatchResult<Data>;
+  make(data: Data): string;
 }
 
-export type ParamsOf<P extends Path> = P["_params"];
+export type DataOf<P extends Path> = P["_data"];
 export type PathOf<P extends Path> = P["path"];
 
 export type MatchError = {
-  readonly error: true;
+  readonly ok: false;
   readonly cause?: Error;
 };
 export type MatchSuccess<P = any> = {
-  readonly error: false;
-  readonly params: P;
+  readonly ok: true;
+  readonly data: P;
   readonly remaining: string;
 };
 export type MatchResult<P = any> = MatchError | MatchSuccess<P>;
 
 /* @__NO_SIDE_EFFECTS__ */
-export const makePath = <Pathname extends string, Params extends ValidParams>(
+export const makePath = <Pathname extends string, Data extends ValidData>(
   path: Pathname,
-  match: (input: string) => MatchResult<Params>,
-  make: (params: Params) => string,
-): Path<Pathname, Params> => ({
-  _params: null as any,
+  match: (input: string) => MatchResult<Data>,
+  make: (data: Data) => string,
+): Path<Pathname, Data> => ({
+  _data: null as any,
   path,
   match,
   make,
@@ -44,7 +44,7 @@ export const makePath = <Pathname extends string, Params extends ValidParams>(
 
 /* @__NO_SIDE_EFFECTS__ */
 export const makeError = (cause?: Error): MatchError => ({
-  error: true,
+  ok: false,
   cause,
 });
 
@@ -53,11 +53,11 @@ type StripLeadingSlash<S extends string> = S extends `/${infer R}`
   : S;
 type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
 
-export type ConstPath<P extends string = string> = Path<P, NoParams>;
+export type ConstPath<P extends string = string> = Path<P, NoData>;
 export type ParametricPath<
   P extends string = string,
-  Params extends Record<string, unknown> = Record<string, unknown>,
-> = Path<P, Params>;
+  Data extends Record<string, unknown> = Record<string, unknown>,
+> = Path<P, Data>;
 
 export type TypeIndicator<T extends string> = `[${T}]`;
 export type StringTypeIndicator = TypeIndicator<"string">;
@@ -96,8 +96,8 @@ export const text = <T extends string>(
     input => {
       if (matchFn(input)) {
         return {
-          error: false,
-          params: null,
+          ok: true,
+          data: null,
           remaining: input.substring(text.length),
         };
       } else {
@@ -126,7 +126,7 @@ export type JoinStringTypes<
 
 /**
  * A primitive that will succeed if the path being matched against is exactly one of the provided string literals.
- * The params will be the matched string value.
+ * The data will be the matched string value.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export function textEnum<const T extends readonly string[]>(
@@ -140,8 +140,8 @@ export function textEnum<const T extends readonly string[]>(
       for (const v of set) {
         if (input.startsWith(v)) {
           return {
-            error: false,
-            params: v as T[number],
+            ok: true,
+            data: v as T[number],
             remaining: input.substring(v.length),
           };
         }
@@ -150,13 +150,13 @@ export function textEnum<const T extends readonly string[]>(
         new Error(`expected one of [${values.join(", ")}], found: "${input}"`),
       );
     },
-    param => {
-      if (!set.has(param)) {
+    data => {
+      if (!set.has(data)) {
         throw new Error(
-          `Invalid value for textEnum: ${param}. Allowed: [${values.join(", ")}].`,
+          `Invalid value for textEnum: ${data}. Allowed: [${values.join(", ")}].`,
         );
       }
-      return param;
+      return data;
     },
   );
 }
@@ -195,8 +195,8 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
         );
       }
       return {
-        error: false,
-        params: str,
+        ok: true,
+        data: str,
         remaining: rest,
       };
     },
@@ -209,33 +209,33 @@ type Isomorphism<L, R> = {
   from: (right: R) => L;
 };
 
-export type MappedPath<P extends Path, To extends ValidParams> = Path<
+export type MappedPath<P extends Path, To extends ValidData> = Path<
   PathOf<P>,
   To
 >;
 
 /* @__NO_SIDE_EFFECTS__ */
-export const mapParams = <P extends Path, R extends ValidParams>(
+export const mapData = <P extends Path, R extends ValidData>(
   path: P,
-  iso: Isomorphism<ParamsOf<P>, R>,
+  iso: Isomorphism<DataOf<P>, R>,
 ): MappedPath<P, R> => {
   return makePath<PathOf<P>, R>(
     path.path,
     input => {
       const res = path.match(input);
-      if (res.error) {
+      if (!res.ok) {
         return res;
       }
       try {
         return {
           ...res,
-          params: iso.to(res.params),
+          data: iso.to(res.data),
         };
       } catch (e) {
         return makeError(e instanceof Error ? e : new Error(String(e)));
       }
     },
-    params => path.make(iso.from(params)),
+    data => path.make(iso.from(data)),
   );
 };
 
@@ -259,16 +259,16 @@ type Keyed<K extends string, P extends string> = `:${K}${WrapTypeIndicator<P>}`;
 export const keyAs = <K extends string, P extends Path>(
   key: K,
   path: P,
-): Path<Keyed<K, PathOf<P>>, { [key in K]: ParamsOf<P> }> => {
+): Path<Keyed<K, PathOf<P>>, { [key in K]: DataOf<P> }> => {
   const pathStr = `:${key}${wrap(path.path)}` as const;
   return {
-    ...mapParams(path, { to: p => ({ [key]: p }), from: p => p[key] }),
+    ...mapData(path, { to: p => ({ [key]: p }), from: p => p[key] }),
     path: pathStr as any,
   } as Path<any>;
 };
 
 /**
- * A Path that consumes the input text into a param.
+ * A Path that consumes the input text into a data.
  * This matching occurs greedily; you can expect it to consume the entire path.
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
  */
@@ -284,7 +284,7 @@ export const parseString: Path<StringTypeIndicator, string> = matchRegexp({
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const parseNumber: Path<TypeIndicator<"number">, number> = mapParams(
+export const parseNumber: Path<TypeIndicator<"number">, number> = mapData(
   matchRegexp({
     path: "[number]" as const,
     regexp: /^(\d*\.?\d+)(.*)$/,
@@ -310,7 +310,7 @@ const ensureLeadingSlash = <S extends string>(s: S): LeadingSlash<S> => {
   return `/${s}` as LeadingSlash<S>;
 };
 
-type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
+type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_data"]>;
 /**
  * A segment considers the contents between the start of the string (ignoring any initial path
  * separator) and the first encountered path separator ("/").
@@ -320,7 +320,7 @@ type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_params"]>;
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const segment = <P extends Path>(inner: P): Segment<P> =>
-  mapParams(
+  mapData(
     matchRegexp({
       path: ensureLeadingSlash(inner.path) as LeadingSlash<PathOf<P>>,
       regexp: /^\/?([^/]*)($|\/.*)/,
@@ -328,7 +328,7 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
     {
       to(left) {
         const innerMatch = inner.match(left);
-        if (innerMatch.error) {
+        if (!innerMatch.ok) {
           throw innerMatch.cause ?? new Error("??");
         }
         if (innerMatch.remaining !== "") {
@@ -336,7 +336,7 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
             `segment text "${left}" matched the inner path, but had unused input "${innerMatch.remaining}"`,
           );
         }
-        return innerMatch.params;
+        return innerMatch.data;
       },
       from: right => `/${inner.make(right)}`,
     },
@@ -344,24 +344,20 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
 
 /**
  * A Path that, when matching, will consume a path segment as a string and capture it as the key
- * `key` of Params.
+ * `key` of Data.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const string = <K extends string>(key: K) =>
   segment(keyAs(key, parseString));
 /**
  * A Path that will consume a path segment and parse it as a number, capturing it as the key `key`
- * of Params.
+ * of Data.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const number = <K extends string>(key: K) =>
   segment(keyAs(key, parseNumber));
 
-type MergeParams<L, R> = L extends NoParams
-  ? R
-  : R extends NoParams
-    ? L
-    : R & L;
+type MergeData<L, R> = L extends NoData ? R : R extends NoData ? L : R & L;
 type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
   infer P extends Path,
   infer P2 extends Path,
@@ -369,10 +365,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
 ]
   ? ConcatenatedPaths<
       [
-        Path<
-          `${P["path"]}${P2["path"]}`,
-          MergeParams<ParamsOf<P>, ParamsOf<P2>>
-        >,
+        Path<`${P["path"]}${P2["path"]}`, MergeData<DataOf<P>, DataOf<P2>>>,
         ...Rest,
       ]
     >
@@ -390,21 +383,21 @@ export const concat = <Ps extends Path[]>(
     parts.map(r => r.path).join("") as any,
     input => {
       let remaining = input;
-      let params: null | Record<string, any> = null;
+      let data: null | Record<string, any> = null;
       for (const p of parts) {
         const matched = p.match(remaining);
-        if (matched.error) {
+        if (!matched.ok) {
           return matched;
         }
         remaining = matched.remaining;
-        if (matched.params !== null) {
-          params = { ...(params ?? {}), ...matched.params };
+        if (matched.data !== null) {
+          data = { ...(data ?? {}), ...matched.data };
         }
       }
-      return { error: false, params, remaining };
+      return { ok: true, data: data, remaining };
     },
-    params => {
-      return parts.map(r => r.make(params)).join("");
+    data => {
+      return parts.map(r => r.make(data)).join("");
     },
   ) as ConcatenatedPaths<Ps>;
 };
@@ -432,9 +425,9 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
 
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string
-  ? Path<LeadingSlash<P>, NoParams>
+  ? Path<LeadingSlash<P>, NoData>
   : P;
-type ParamsOfPT<P extends PathOrText> = ParamsOf<PathOrTextToPath<P>>;
+type DataOfPT<P extends PathOrText> = DataOf<PathOrTextToPath<P>>;
 type CombinedPath<Ps extends PathOrText[]> = Ps extends [
   infer P extends PathOrText,
   infer P2 extends PathOrText,
@@ -444,17 +437,17 @@ type CombinedPath<Ps extends PathOrText[]> = Ps extends [
       [
         Path<
           `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
-          ParamsOfPT<P> extends NoParams
-            ? ParamsOfPT<P2>
-            : ParamsOfPT<P2> extends NoParams
-              ? ParamsOfPT<P>
+          DataOfPT<P> extends NoData
+            ? DataOfPT<P2>
+            : DataOfPT<P2> extends NoData
+              ? DataOfPT<P>
               : {
                   [K in
-                    | keyof ParamsOfPT<P>
-                    | keyof ParamsOfPT<P2>]: K extends keyof ParamsOfPT<P2>
-                    ? ParamsOfPT<P2>[K]
-                    : K extends keyof ParamsOfPT<P>
-                      ? ParamsOfPT<P>[K]
+                    | keyof DataOfPT<P>
+                    | keyof DataOfPT<P2>]: K extends keyof DataOfPT<P2>
+                    ? DataOfPT<P2>[K]
+                    : K extends keyof DataOfPT<P>
+                      ? DataOfPT<P>[K]
                       : never;
                 }
         >,

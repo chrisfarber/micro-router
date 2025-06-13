@@ -2,13 +2,13 @@ import { type FC, type ReactElement, type ReactNode, useMemo } from "react";
 import type {
   MatchResult,
   MatchSuccess,
-  ParamsOf,
+  DataOf,
   Path,
 } from "@micro-router/core";
 import { useLocation } from "./hooks";
 
 const exactMatch = (m: MatchResult<unknown>): boolean => {
-  if (!m.error) {
+  if (m.ok) {
     return m.remaining === "" || m.remaining === "/";
   }
   return false;
@@ -18,18 +18,18 @@ export type PathMatchOpts = { exact?: boolean };
 const usePathMatch = <P extends Path>(
   path: P,
   opts?: PathMatchOpts,
-): [true, ParamsOf<P>] | [false, null] => {
+): [true, DataOf<P>] | [false, null] => {
   const { exact } = opts ?? {};
   const loc = useLocation();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const [matches, params] = useMemo(() => {
+  const [matches, data] = useMemo(() => {
     const match = path.match(loc.pathname);
-    if (match.error || (exact && !exactMatch(match))) {
+    if (!match.ok || (exact && !exactMatch(match))) {
       return [false, null];
     }
-    return [true, match.params];
+    return [true, match.data];
   }, [loc, path, exact]);
-  return [matches, params];
+  return [matches, data];
 };
 
 type MatchComponentProps = {
@@ -43,7 +43,7 @@ type MatchComponentProps = {
 };
 export type PathMatchComponent<P extends Path = Path> = {
   path: P;
-  Matched: FC<ParamsOf<P>>;
+  Matched: FC<DataOf<P>>;
 } & FC<MatchComponentProps>;
 
 /**
@@ -58,9 +58,9 @@ export type PathMatchComponent<P extends Path = Path> = {
  */
 export const match = <P extends Path>(
   path: P,
-  render: (params: ParamsOf<P>) => ReactElement | null,
+  render: (params: DataOf<P>) => ReactElement | null,
 ): PathMatchComponent<P> => {
-  const Matched: FC<ParamsOf<P>> = render;
+  const Matched: FC<DataOf<P>> = render;
   Matched.displayName = `Match: ${path.path}`;
 
   const Outer: FC<MatchComponentProps> = props => {
@@ -103,7 +103,7 @@ export const bestMatch = <Matches extends PathMatchComponent[]>({
       for (const Match of of) {
         const { path } = Match;
         const result = path.match(pathname);
-        if (result.error) continue;
+        if (!result.ok) continue;
         const remaining = result.remaining.length;
         if (!best || best.result.remaining.length > remaining) {
           best = { Match, result };
@@ -114,7 +114,7 @@ export const bestMatch = <Matches extends PathMatchComponent[]>({
       if (!best || (exact && !exactMatch(best.result))) {
         return fallback ?? null;
       } else {
-        return <best.Match.Matched {...best.result.params} />;
+        return <best.Match.Matched {...best.result.data} />;
       }
     }, [pathname]);
     return matched;

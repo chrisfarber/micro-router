@@ -1,0 +1,8 @@
+{
+  "name": "micro-router",
+  "engineVersion": "v0.18.19",
+  "sdk": {
+    "source": "typescript"
+  },
+  "source": ".dagger"
+}

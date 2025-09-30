@@ -1,41 +1,44 @@
-/**
- * A generated module for MicroRouter functions
- *
- * This module has been generated via dagger init and serves as a reference to
- * basic module structure as you get started with Dagger.
- *
- * Two functions have been pre-created. You can modify, delete, or add to them,
- * as needed. They demonstrate usage of arguments and return types using simple
- * echo and grep commands. The functions can be called from the dagger CLI or
- * from one of the SDKs.
- *
- * The first line in this comment block is a short description line and the
- * rest is a long description with more detail on the module's purpose or usage,
- * if appropriate. All modules should have a short description.
- */
-import { dag, Container, Directory, object, func } from "@dagger.io/dagger"
+import {
+  dag,
+  Container,
+  Directory,
+  object,
+  func,
+  argument,
+} from "@dagger.io/dagger";
 
 @object()
 export class MicroRouter {
-  /**
-   * Returns a container that echoes whatever string argument is provided
-   */
-  @func()
-  containerEcho(stringArg: string): Container {
-    return dag.container().from("alpine:latest").withExec(["echo", stringArg])
+  source: Directory;
+
+  constructor(
+    @argument({
+      defaultPath: ".",
+      ignore: ["node_modules", "**/node_modules", ".turbo", "packages/**/dist"],
+    })
+    source: Directory,
+  ) {
+    this.source = source;
   }
 
-  /**
-   * Returns lines that match a pattern in the files of the provided Directory
-   */
   @func()
-  async grepDir(directoryArg: Directory, pattern: string): Promise<string> {
+  container(): Container {
     return dag
       .container()
-      .from("alpine:latest")
-      .withMountedDirectory("/mnt", directoryArg)
-      .withWorkdir("/mnt")
-      .withExec(["grep", "-R", pattern, "."])
-      .stdout()
+      .from("node:24")
+      .withDirectory("/src", this.source)
+      .withWorkdir("/src")
+      .withExec(["corepack", "enable"])
+      .withExec(["pnpm", "install", "--frozen-lockfile"]);
+  }
+
+  @func()
+  buildAndTest(): Promise<string> {
+    return this.container()
+      .withExec(["pnpm", "turbo", "build"])
+      .withExec(["pnpm", "turbo", "typecheck"])
+      .withExec(["pnpm", "turbo", "lint"])
+      .withExec(["pnpm", "turbo", "test"])
+      .stdout();
   }
 }

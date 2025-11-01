@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bestMatch, Link, match, NavigatorProvider } from "../lib";
+import { bestMatch, Link, match, NavigatorProvider } from "@micro-router/react";
 import { number, path, string } from "@micro-router/core";
 import "./App.css";
 import { Go } from "./Go";
@@ -11,6 +11,9 @@ const MessagesPath = path(BasePath, "messages");
 const MessageByIdPath = path(MessagesPath, string("messageId"));
 const MessageEditPath = path(MessageByIdPath, "edit", string("part"));
 const SubMessageEditPath = path(MessageEditPath, number("entropy"));
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const TreeShakeMe = path(SubMessageEditPath, "tree-shake-me");
 
 const BasePage = match(BasePath, () => <h4>BasePath</h4>);
 

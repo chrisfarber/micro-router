@@ -87,6 +87,40 @@ importers:
         specifier: 'catalog:'
         version: 4.0.6(@types/node@20.14.9)
 
+  packages/playground:
+    dependencies:
+      '@micro-router/core':
+        specifier: workspace:^
+        version: link:../core
+      '@micro-router/history':
+        specifier: workspace:^
+        version: link:../history
+      '@micro-router/react':
+        specifier: workspace:^
+        version: link:../react
+      react:
+        specifier: ^19.2.0
+        version: 19.2.0
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.0(react@19.2.0)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.2
+        version: 19.2.2
+      '@types/react-dom':
+        specifier: ^19.2.2
+        version: 19.2.2(@types/react@19.2.2)
+      '@vitejs/plugin-react-swc':
+        specifier: ^4.2.0
+        version: 4.2.0(vite@7.1.12(@types/node@20.14.9))
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: 7.1.12(@types/node@20.14.9)
+
   packages/react:
     dependencies:
       react:

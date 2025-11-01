@@ -1,0 +1,29 @@
+{
+  "name": "@micro-router/playground",
+  "description": "Development playground for micro-router",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "pnpm run /^lint:[^:]*$/",
+    "lint:eslint": "eslint --max-warnings=0",
+    "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@micro-router/core": "workspace:^",
+    "@micro-router/history": "workspace:^",
+    "@micro-router/react": "workspace:^",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react-swc": "^4.2.0",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

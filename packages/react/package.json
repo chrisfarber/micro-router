@@ -18,8 +18,7 @@
     "lint:eslint": "eslint --max-warnings=0",
     "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
     "test": "vitest run",
-    "build": "vite build",
-    "dev": "vite dev"
+    "build": "vite build"
   },
   "peerDependencies": {
     "@micro-router/core": "workspace:^",

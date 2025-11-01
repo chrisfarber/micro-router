@@ -1,4 +1,4 @@
-import { useLocation } from "../lib/hooks";
+import { useLocation } from "@micro-router/react";
 
 export const WhereAmI = () => {
   const loc = useLocation();

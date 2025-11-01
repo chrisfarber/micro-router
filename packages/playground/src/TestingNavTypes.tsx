@@ -1,4 +1,4 @@
-import { useNavigator } from "../lib/provider";
+import { useNavigator } from "@micro-router/react";
 import * as Path from "@micro-router/core";
 
 const BasePath = Path.path("/base");

@@ -149,7 +149,7 @@ export function textEnum<const T extends readonly string[]>(
     param => {
       if (!set.has(param)) {
         throw new Error(
-          `Invalid value for textEnum: ${String(param)}. Allowed: [${values.join(", ")}].`,
+          `Invalid value for textEnum: ${param}. Allowed: [${values.join(", ")}].`,
         );
       }
       return param;

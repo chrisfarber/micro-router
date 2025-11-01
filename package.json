@@ -12,16 +12,16 @@
     "build": "turbo build"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.4",
-    "@eslint/js": "^9.28.0",
-    "eslint": "^9.28.0",
-    "eslint-config-prettier": "^10.1.5",
+    "@changesets/cli": "^2.29.7",
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "prettier": "^3.5.3",
-    "turbo": "^2.5.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "prettier": "^3.6.2",
+    "turbo": "^2.6.0",
     "typescript": "catalog:",
-    "typescript-eslint": "^8.33.0"
+    "typescript-eslint": "^8.46.2"
   },
   "packageManager": "pnpm@10.9.0+sha512.0486e394640d3c1fb3c9d43d49cf92879ff74f8516959c235308f5a8f62e2e19528a65cdc2a3058f587cde71eba3d5b56327c8c33a97e4c4051ca48a10ca2d5f"
 }

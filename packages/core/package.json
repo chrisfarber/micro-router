@@ -22,12 +22,11 @@
     "lint:eslint": "eslint --max-warnings=0",
     "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
     "test": "vitest run",
-    "build": "vite build"
+    "build": "tsdown"
   },
   "devDependencies": {
+    "tsdown": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:",
-    "vite-plugin-dts": "catalog:"
+    "vitest": "catalog:"
   }
 }

@@ -22,7 +22,7 @@
     "lint:eslint": "eslint --max-warnings=0",
     "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
     "test": "vitest run",
-    "build": "vite build"
+    "build": "tsdown"
   },
   "peerDependencies": {
     "@micro-router/core": "workspace:^"
@@ -30,8 +30,7 @@
   "devDependencies": {
     "@micro-router/core": "workspace:^",
     "typescript": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:",
-    "vite-plugin-dts": "catalog:"
+    "tsdown": "catalog:"
   }
 }

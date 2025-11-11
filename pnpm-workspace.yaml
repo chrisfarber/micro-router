@@ -2,12 +2,12 @@ packages:
   - packages/*
 
 catalog:
+  rollup-plugin-visualizer: ^5.14.0
   typescript: ^5.9.3
   vite: ^7.1.12
-  vitest: ^4.0.6
   vite-plugin-dts: ^4.5.4
-  rollup-plugin-visualizer: ^5.14.0
+  vitest: ^4.0.6
 
 onlyBuiltDependencies:
-  - "@swc/core"
+  - '@swc/core'
   - esbuild

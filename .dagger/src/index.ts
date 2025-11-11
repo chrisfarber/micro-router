@@ -14,7 +14,16 @@ export class MicroRouter {
   constructor(
     @argument({
       defaultPath: ".",
-      ignore: ["node_modules", "**/node_modules", ".turbo", "packages/**/dist"],
+      ignore: [
+        "node_modules",
+        "**/node_modules",
+        ".turbo",
+        ".dagger",
+        ".claude",
+        ".git",
+        ".jj",
+        "packages/**/dist",
+      ],
     })
     source: Directory,
   ) {
@@ -33,12 +42,11 @@ export class MicroRouter {
   }
 
   @func()
-  buildAndTest(): Promise<string> {
+  buildAndTest(): Container {
     return this.container()
       .withExec(["pnpm", "turbo", "build"])
       .withExec(["pnpm", "turbo", "typecheck"])
       .withExec(["pnpm", "turbo", "lint"])
-      .withExec(["pnpm", "turbo", "test"])
-      .stdout();
+      .withExec(["pnpm", "turbo", "test"]);
   }
 }

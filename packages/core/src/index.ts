@@ -12,7 +12,42 @@ export interface Path<
 > {
   readonly path: Pathname;
   readonly _data: Data;
+
+  /**
+   * The number of dynamic data captures in this path pattern.
+   *
+   * Static paths have 0 captures (e.g., `path("/message/inbox")`)
+   * Dynamic paths have 1+ captures (e.g., `path("/users", string("id"))` has 1)
+   *
+   * This is useful for route specificity comparison:
+   * When multiple routes match the same input with equal remaining text,
+   * the route with fewer captures should be preferred as it is more specific.
+   *
+   * @example
+   * ```typescript
+   * const static = path("/message/inbox");        // captures: 0
+   * const dynamic = path("/message", string("id")); // captures: 1
+   *
+   * // Both match "/message/inbox", but static route should win
+   * // because it has fewer captures (more specific)
+   * ```
+   */
+  readonly captures: number;
+
+  /**
+   * Attempts to match this path pattern against the input string.
+   *
+   * @param input - The URL path to match against
+   * @returns A MatchResult indicating success or failure with extracted data
+   */
   match(input: string): MatchResult<Data>;
+
+  /**
+   * Generates a URL path from the provided data.
+   *
+   * @param data - The data to use for generating the path
+   * @returns The generated URL path string
+   */
   make(data: Data): string;
 }
 
@@ -35,11 +70,13 @@ export const makePath = <Pathname extends string, Data extends ValidData>(
   path: Pathname,
   match: (input: string) => MatchResult<Data>,
   make: (data: Data) => string,
+  captures: number,
 ): Path<Pathname, Data> => ({
   _data: null as any,
   path,
   match,
   make,
+  captures,
 });
 
 /* @__NO_SIDE_EFFECTS__ */
@@ -105,6 +142,7 @@ export const matchText = <T extends string>(
       }
     },
     () => text,
+    0, // captures
   );
 };
 
@@ -158,6 +196,7 @@ export function matchTextEnum<const T extends readonly string[]>(
       }
       return data;
     },
+    1, // captures - extracts which literal matched
   );
 }
 
@@ -201,6 +240,7 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
       };
     },
     s => s,
+    1, // captures
   );
 };
 
@@ -236,6 +276,7 @@ export const mapData = <P extends Path, R extends ValidData>(
       }
     },
     data => path.make(iso.from(data)),
+    path.captures, // preserve captures
   );
 };
 
@@ -332,8 +373,8 @@ type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_data"]>;
  * if the first path segment is empty. Otherwise, it succeeds if the inner Path succeeds.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const segment = <P extends Path>(inner: P): Segment<P> =>
-  mapData(
+export const segment = <P extends Path>(inner: P): Segment<P> => {
+  const mapped = mapData(
     matchRegexp({
       path: ensureLeadingSlash(inner.path) as LeadingSlash<PathOf<P>>,
       regexp: /^\/?([^/]*)($|\/.*)/,
@@ -354,6 +395,9 @@ export const segment = <P extends Path>(inner: P): Segment<P> =>
       from: right => `/${inner.make(right)}`,
     },
   );
+  // Override captures to match inner path, not the regexp
+  return { ...mapped, captures: inner.captures };
+};
 
 /**
  * A Path that, when matching, will consume a path segment as a string and capture it as the key
@@ -407,6 +451,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
 export const concat = <Ps extends Path[]>(
   ...parts: Ps
 ): ConcatenatedPaths<Ps> => {
+  const totalCaptures = parts.reduce((sum, p) => sum + p.captures, 0);
   return makePath(
     parts.map(r => r.path).join("") as any,
     input => {
@@ -427,6 +472,7 @@ export const concat = <Ps extends Path[]>(
     data => {
       return parts.map(r => r.make(data)).join("");
     },
+    totalCaptures, // sum of all captures
   ) as ConcatenatedPaths<Ps>;
 };
 

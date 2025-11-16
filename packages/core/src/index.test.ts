@@ -427,4 +427,120 @@ describe("Path Definition", () => {
       });
     });
   });
+
+  describe("captures", () => {
+    describe("static paths have 0 captures", () => {
+      it("matchText", () => {
+        expect(matchText("hello").captures).toBe(0);
+      });
+
+      it("textSegments", () => {
+        expect(textSegments("/users/inbox").captures).toBe(0);
+      });
+
+      it("path with only static segments", () => {
+        expect(path("/message/inbox").captures).toBe(0);
+      });
+    });
+
+    describe("dynamic paths have captures", () => {
+      it("matchString", () => {
+        expect(matchString.captures).toBe(1);
+      });
+
+      it("matchNumber", () => {
+        expect(matchNumber.captures).toBe(1);
+      });
+
+      it("matchTextEnum", () => {
+        expect(matchTextEnum("red", "blue", "green").captures).toBe(1);
+      });
+
+      it("string(key)", () => {
+        expect(string("id").captures).toBe(1);
+      });
+
+      it("number(key)", () => {
+        expect(number("count").captures).toBe(1);
+      });
+
+      it("textEnum", () => {
+        expect(
+          textEnum({ key: "color", options: ["red", "blue", "green"] })
+            .captures,
+        ).toBe(1);
+      });
+    });
+
+    describe("composed paths sum captures", () => {
+      it("concat sums captures", () => {
+        expect(concat(matchText("hello"), matchText("there")).captures).toBe(0);
+        expect(concat(matchText("hello"), string("name")).captures).toBe(1);
+        expect(concat(string("first"), string("last")).captures).toBe(2);
+      });
+
+      it("path sums captures", () => {
+        expect(path("/users", string("id")).captures).toBe(1);
+        expect(
+          path("/posts", string("id"), "/comments", number("cid")).captures,
+        ).toBe(2);
+        expect(path("/message/inbox").captures).toBe(0);
+      });
+
+      it("complex composition", () => {
+        const route = path(
+          "/users",
+          string("userId"),
+          "/posts",
+          number("postId"),
+          "/comments",
+          string("commentId"),
+        );
+        expect(route.captures).toBe(3);
+      });
+    });
+
+    describe("transformations preserve captures", () => {
+      it("mapData preserves captures", () => {
+        const mappedOne = mapData(string("id"), {
+          to: data => ({ id: data.id.toUpperCase() }),
+          from: data => ({ id: data.id.toLowerCase() }),
+        });
+        expect(mappedOne.captures).toBe(1);
+
+        const mappedTwo = mapData(path(string("a"), string("b")), {
+          to: data => `${data.a},${data.b}`,
+          from: data => {
+            const [a, b] = data.split(",");
+            if (!a || !b) {
+              throw new Error("oh no");
+            }
+            return { a, b };
+          },
+        });
+        expect(mappedTwo.captures).toBe(2);
+      });
+
+      it("keyAs preserves captures", () => {
+        const keyed = keyAs("name", matchString);
+        const noCaptures = keyAs("null", matchText("hi"));
+        expect(keyed.captures).toBe(1);
+        expect(noCaptures.captures).toBe(0);
+      });
+
+      it("segment preserves captures", () => {
+        const segmented = segment(matchText("hello"));
+        expect(segmented.captures).toBe(0);
+
+        const segmented2 = segment(
+          concat(
+            keyAs("say", matchTextEnum("hello", "goodbye")),
+            matchText("_"),
+            string("to"),
+          ),
+        );
+        expect(segmented2.captures).toEqual(2);
+      });
+    });
+  });
 });

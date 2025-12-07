@@ -8,7 +8,6 @@ import { segment } from "./segment";
  * This matching occurs greedily; you can expect it to consume the entire path.
  * Therefore, you probably want to use the segment wrapped version instead, `string`.
  */
-
 /* @__NO_SIDE_EFFECTS__ */
 export const matchString: Path<StringTypeIndicator, string> = matchRegexp({
   regexp: /^(.+)($)/,

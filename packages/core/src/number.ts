@@ -7,7 +7,7 @@ import { matchRegexp } from "./regexp";
 /**
  * A path that succeeds if it can parse the beginning of the input as a base 10 number.
  *
- * Not greedy, unlike `parseString`. It is incompatible with leading slashes, however,
+ * Not greedy, unlike `matchString`. It is incompatible with leading slashes, however,
  * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
  */
 /* @__NO_SIDE_EFFECTS__ */

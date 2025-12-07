@@ -16,7 +16,6 @@ type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
  * This path will fail to match if there is any extra text at the end of the last matching path segment.
  *
  * @param path A URL fragment, optionally beginning with a leading slash. The slash will be inferred if not.
- * @returns
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const textSegments = <T extends string>(path: T): TextSegments<T> => {

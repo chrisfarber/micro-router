@@ -62,6 +62,7 @@ export type MatchSuccess<P = any> = {
   readonly ok: true;
   readonly data: P;
   readonly remaining: string;
+  readonly captures: number;
 };
 export type MatchResult<P = any> = MatchFailure | MatchSuccess<P>;
 
@@ -136,6 +137,7 @@ export const matchText = <T extends string>(
           ok: true,
           data: null,
           remaining: input.substring(text.length),
+          captures: 0,
         };
       } else {
         return makeFailure(new Error(`expected "${text}", found: "${input}"`));
@@ -172,6 +174,7 @@ export function matchTextEnum<const T extends readonly string[]>(
 ): Path<`(${JoinStringTypes<T, "|">})`, T[number]> {
   const set = new Set(values);
   const pathStr = `(${values.join("|")})` as `(${JoinStringTypes<T, "|">})`;
+  const captures = 1;
   return makePath(
     pathStr,
     input => {
@@ -181,6 +184,7 @@ export function matchTextEnum<const T extends readonly string[]>(
             ok: true,
             data: v as T[number],
             remaining: input.substring(v.length),
+            captures,
           };
         }
       }
@@ -196,7 +200,7 @@ export function matchTextEnum<const T extends readonly string[]>(
       }
       return data;
     },
-    1, // captures - extracts which literal matched
+    captures,
   );
 }
 
@@ -216,6 +220,7 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
   regexp,
   path: key,
 }: MatchRegexpOpts<P>): Path<P, string> => {
+  const captures = 1;
   return makePath(
     key ?? ("[string]" as any),
     input => {
@@ -237,10 +242,11 @@ export const matchRegexp = <P extends string = StringTypeIndicator>({
         ok: true,
         data: str,
         remaining: rest,
+        captures,
       };
     },
     s => s,
-    1, // captures
+    captures,
   );
 };
 
@@ -276,7 +282,7 @@ export const mapData = <P extends Path, R extends ValidData>(
       }
     },
     data => path.make(iso.from(data)),
-    path.captures, // preserve captures
+    path.captures,
   );
 };
 
@@ -395,8 +401,17 @@ export const segment = <P extends Path>(inner: P): Segment<P> => {
       from: right => `/${inner.make(right)}`,
     },
   );
-  // Override captures to match inner path, not the regexp
-  return { ...mapped, captures: inner.captures };
+  return {
+    ...mapped,
+    captures: inner.captures,
+    match: input => {
+      const res = mapped.match(input);
+      if (!res.ok) {
+        return res;
+      }
+      return { ...res, captures: inner.captures };
+    },
+  };
 };
 
 /**
@@ -451,7 +466,7 @@ type ConcatenatedPaths<Ps extends Path[]> = Ps extends [
 export const concat = <Ps extends Path[]>(
   ...parts: Ps
 ): ConcatenatedPaths<Ps> => {
-  const totalCaptures = parts.reduce((sum, p) => sum + p.captures, 0);
+  const captures = parts.reduce((sum, p) => sum + p.captures, 0);
   return makePath(
     parts.map(r => r.path).join("") as any,
     input => {
@@ -467,12 +482,12 @@ export const concat = <Ps extends Path[]>(
           data = { ...(data ?? {}), ...matched.data };
         }
       }
-      return { ok: true, data: data, remaining };
+      return { ok: true, data: data, remaining, captures };
     },
     data => {
       return parts.map(r => r.make(data)).join("");
     },
-    totalCaptures, // sum of all captures
+    captures,
   ) as ConcatenatedPaths<Ps>;
 };
 

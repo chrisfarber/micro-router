@@ -38,6 +38,15 @@ export default defineConfig(
       // Disable due to bug in @typescript-eslint/unified-signatures v8.46.2
       // causing "typeParameters.params is not iterable" error
       "@typescript-eslint/unified-signatures": "off",
+      // Allow unused variables that start with underscore
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 );

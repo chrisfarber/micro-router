@@ -1,4 +1,4 @@
-import type { DataOf, Path } from "@micro-router/core";
+import type { DataOfPath, Path } from "@micro-router/core";
 import {
   type MouseEvent,
   type PropsWithChildren,
@@ -8,8 +8,8 @@ import {
 import { useNavigator } from "./provider";
 
 type ParamsPropFor<P extends Path | string> = P extends Path
-  ? DataOf<P> extends Record<string, unknown>
-    ? { params: DataOf<P> }
+  ? DataOfPath<P> extends Record<string, unknown>
+    ? { params: DataOfPath<P> }
     : unknown
   : unknown;
 

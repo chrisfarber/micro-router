@@ -28,6 +28,7 @@ describe("Path Definition", () => {
           ok: true,
           data: null,
           remaining: "there",
+          captures: 0,
         });
 
         expect(part.make(null)).toEqual("hello");
@@ -57,12 +58,14 @@ describe("Path Definition", () => {
           ok: true,
           data: "one",
           remaining: "",
+          captures: 1,
         });
 
         expect(nums.match("twoooo")).toEqual({
           ok: true,
           data: "two",
           remaining: "ooo",
+          captures: 1,
         });
 
         expect(nums.match("through")).toMatchObject({
@@ -92,6 +95,7 @@ describe("Path Definition", () => {
           ok: true,
           data: { bluey: "hello-there" },
           remaining: "",
+          captures: 1,
         });
 
         const m2 = param.match("hello49/other-stuff");
@@ -99,6 +103,7 @@ describe("Path Definition", () => {
           ok: true,
           data: { bluey: "hello49" },
           remaining: "/other-stuff",
+          captures: 1,
         });
       });
 
@@ -144,16 +149,19 @@ describe("Path Definition", () => {
           ok: true,
           data: { color: "red" },
           remaining: "",
+          captures: 1,
         });
         expect(color.match("/blue/other")).toEqual({
           ok: true,
           data: { color: "blue" },
           remaining: "/other",
+          captures: 1,
         });
         expect(color.match("/green")).toEqual({
           ok: true,
           data: { color: "green" },
           remaining: "",
+          captures: 1,
         });
       });
 
@@ -247,6 +255,7 @@ describe("Path Definition", () => {
         ok: true,
         data: null,
         remaining: "friend",
+        captures: 0,
       });
     });
 
@@ -314,6 +323,7 @@ describe("Path Definition", () => {
         ok: true,
         data: null,
         remaining: "/too",
+        captures: 0,
       });
 
       const description: (typeof s)["path"] = "/this-works";
@@ -395,6 +405,7 @@ describe("Path Definition", () => {
           person: "alice",
         },
         remaining: "",
+        captures: 2,
       });
     });
   });

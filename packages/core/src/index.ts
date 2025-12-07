@@ -1,4 +1,5 @@
 export type {
+  ConstPath,
   DataOfPath,
   MatchFailure,
   MatchResult,
@@ -6,7 +7,6 @@ export type {
   NoData,
   Path,
   ValidData,
-  ConstPath,
 } from "./definitions";
 
 export { matchRegexp, type MatchRegexpOpts } from "./regexp";
@@ -26,3 +26,11 @@ export {
 
 export { concat } from "./concat";
 export { path, textSegments } from "./path";
+
+export {
+  bestMatchComparator,
+  longestMatchComparator,
+  router,
+  type MatchComparator,
+  type RouterOpts,
+} from "./router";

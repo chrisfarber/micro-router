@@ -2,7 +2,7 @@ import { type FC, type ReactElement, type ReactNode, useMemo } from "react";
 import type {
   MatchResult,
   MatchSuccess,
-  DataOf,
+  DataOfPath,
   Path,
 } from "@micro-router/core";
 import { useLocation } from "./hooks";
@@ -18,7 +18,7 @@ export type PathMatchOpts = { exact?: boolean };
 const usePathMatch = <P extends Path>(
   path: P,
   opts?: PathMatchOpts,
-): [true, DataOf<P>] | [false, null] => {
+): [true, DataOfPath<P>] | [false, null] => {
   const { exact } = opts ?? {};
   const loc = useLocation();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -43,7 +43,7 @@ type MatchComponentProps = {
 };
 export type PathMatchComponent<P extends Path = Path> = {
   path: P;
-  Matched: FC<DataOf<P>>;
+  Matched: FC<DataOfPath<P>>;
 } & FC<MatchComponentProps>;
 
 /**
@@ -58,9 +58,9 @@ export type PathMatchComponent<P extends Path = Path> = {
  */
 export const match = <P extends Path>(
   path: P,
-  render: (params: DataOf<P>) => ReactElement | null,
+  render: (params: DataOfPath<P>) => ReactElement | null,
 ): PathMatchComponent<P> => {
-  const Matched: FC<DataOf<P>> = render;
+  const Matched: FC<DataOfPath<P>> = render;
   Matched.displayName = `Match: ${path.path}`;
 
   const Outer: FC<MatchComponentProps> = props => {

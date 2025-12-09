@@ -37,6 +37,8 @@ export class MicroRouter {
     return dag
       .container()
       .from("node:24")
+      .withEnvVariable("CI", "true")
+      .withExec(["npx", "playwright@1.57.0", "install", "--with-deps"])
       .withDirectory("/src", this.source)
       .withWorkdir("/src")
       .withMountedCache("/root/.cache/node", nodeCache)

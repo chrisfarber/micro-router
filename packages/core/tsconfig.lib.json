@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["es2022", "dom", "dom.iterable"],
+    "lib": ["es2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],
     "verbatimModuleSyntax": true,
     "module": "Preserve",
     "moduleResolution": "bundler",
@@ -11,8 +11,6 @@
     "isolatedModules": true,
     "noEmit": true,
     "composite": true,
-
-    "skipLibCheck": true,
 
     "allowJs": true,
     "resolveJsonModule": true,

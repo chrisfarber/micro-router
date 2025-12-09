@@ -4,7 +4,22 @@ import type { History, Location } from "@micro-router/history";
 type Listener = (l: Location) => void;
 type StopListening = () => void;
 
+/**
+ * The
+ */
 export interface INavigator {
+  /**
+   * Start listening and responding to history events.
+   * `<NavigatorProvider>` will call this automatically.
+   */
+  start(): void;
+  /**
+   * Stop listening to history events.
+   * `<NavigatorProvider>` will call this automatically
+   * when it is unmounted.
+   */
+  stop(): void;
+
   get location(): Location;
 
   go(offset: number): void;

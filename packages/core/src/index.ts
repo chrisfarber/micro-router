@@ -9,6 +9,8 @@ export type {
   ValidData,
 } from "./definitions";
 
+export { isExactMatch } from "./matches";
+
 export { matchRegexp, type MatchRegexpOpts } from "./regexp";
 
 export { keyAs } from "./key-as";

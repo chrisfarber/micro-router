@@ -89,15 +89,37 @@ export type RouterOpts = {
    * @default `bestMatchComparator`
    */
   comparator?: MatchComparator;
+
+  /**
+   * Whether to allow partial matches (where the path doesn't consume the
+   * entire input string).
+   *
+   * When `false`, only paths that fully consume the input will be considered.
+   * When `true`, paths that leave remaining characters can still match.
+   *
+   * @default false
+   */
+  partialMatch?: boolean;
+};
+
+export type DispatchOpts = {
+  /**
+   * Whether to allow partial matches for this specific dispatch call.
+   * Overrides the router-level `partialMatch` setting if provided.
+   */
+  partialMatch?: boolean;
 };
 
 class RouterBuilder {
   constructor(opts?: RouterOpts) {
-    const { comparator = bestMatchComparator } = opts ?? {};
+    const { comparator = bestMatchComparator, partialMatch = false } =
+      opts ?? {};
     this.#comparator = comparator;
+    this.#partialMatch = partialMatch;
   }
 
   #comparator: MatchComparator;
+  #partialMatch: boolean;
   #handlers: HandlerPair<Path, any>[] = [];
   #defaultHandler: DefaultHandler<any> = nullDefault;
 
@@ -116,11 +138,16 @@ class RouterBuilder {
     return this;
   }
 
-  dispatch(input: string): any {
+  dispatch(input: string, opts?: DispatchOpts): any {
+    const partialMatch = opts?.partialMatch ?? this.#partialMatch;
     let best: [MatchSuccess, RouteHandler<any, any>] | null = null;
     for (const [path, handler] of this.#handlers) {
       const result = path.match(input);
       if (result.ok) {
+        // When requiring exact matches, treat trailing slash as exact
+        const isExactMatch =
+          result.remaining.length === 0 || result.remaining === "/";
+        if (!partialMatch && !isExactMatch) continue;
         if (!best || this.#comparator(best[0], result) > 0)
           best = [result, handler];
       }
@@ -198,8 +225,14 @@ export type Router<
    * will throw an exception.
    *
    * Otherwise, `null` will be returned.
+   *
+   * @param input The input string to match against registered paths
+   * @param opts Optional dispatch configuration to override router-level settings
    */
-  dispatch(input: string): Exhaustive extends true ? Result : Result | null;
+  dispatch(
+    input: string,
+    opts?: DispatchOpts,
+  ): Exhaustive extends true ? Result : Result | null;
 };
 
 /**

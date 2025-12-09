@@ -11,7 +11,7 @@ describe("router", () => {
       const UserSettingsPath = path(UserByIdPath, "settings");
 
       const fires: number[] = [];
-      const r = router()
+      const r = router({ partialMatch: true })
         .on(UsersPath, () => {
           fires.push(0);
           return 0;
@@ -60,14 +60,29 @@ describe("router", () => {
   });
 
   describe("with longestMatchComparator", () => {
-    it("chooses the path ignoring captures", () => {
+    it("returns null when no exact match exists (default)", () => {
       const r = router({ comparator: longestMatchComparator })
-        .on(path("/users/all", string("here")), () => 0)
-        .on(path("/users/all/around"), () => 1)
-        .on(path("/users", string("id"), string("action")), () => 2);
+        .on(path("/users"), () => 0)
+        .on(path("/users", string("id")), () => 1);
 
-      expect(r.dispatch("/users/all/around")).toEqual(0);
+      // With exact match only, neither path matches "/users/42/settings"
+      expect(r.dispatch("/users/42/settings")).toEqual(null);
     });
+
+    it("chooses the path with longest match when partial matches allowed", () => {
+      const r = router({
+        comparator: longestMatchComparator,
+        partialMatch: true,
+      })
+        .on(path("/users"), () => 0)
+        .on(path("/users", string("id")), () => 1);
+
+      // path 0 matches "/users" with remaining "/42/settings"
+      // path 1 matches "/users/42" with remaining "/settings"
+      // longestMatchComparator prefers shorter remaining, so path 1 wins
+      expect(r.dispatch("/users/42/settings")).toEqual(1);
+    });
+
   });
 
   describe(".exhaustive()", () => {
@@ -111,6 +126,73 @@ describe("router", () => {
         .on(path("c"), () => "c");
 
       expect(r.dispatch("/a")).toEqual("a");
+    });
+  });
+
+  describe("exact vs partial matching", () => {
+    it("only matches exact paths by default", () => {
+      const r = router()
+        .on(path("/users"), () => "users")
+        .on(path("/users", string("id")), () => "userById");
+
+      expect(r.dispatch("/users")).toEqual("users");
+      expect(r.dispatch("/users/42")).toEqual("userById");
+
+      // Partial match is filtered out
+      expect(r.dispatch("/users/42/settings")).toEqual(null);
+    });
+
+    it("allows trailing slashes in exact match mode", () => {
+      const r = router()
+        .on(path("/users"), () => "users")
+        .on(path("/users", string("id")), () => "userById");
+
+      // Trailing slashes are treated as exact matches
+      expect(r.dispatch("/users/")).toEqual("users");
+      expect(r.dispatch("/users/42/")).toEqual("userById");
+    });
+
+    it("preserves trailing slash in remaining for partial matches", () => {
+      const r = router({ partialMatch: true })
+        .on(path("/users"), result => ({
+          name: "users",
+          remaining: result.remaining,
+        }))
+        .on(path("/users", string("id")), result => ({
+          name: "user",
+          id: result.data.id,
+          remaining: result.remaining,
+        }));
+
+      // Trailing slash is preserved in remaining for inspection
+      const result1 = r.dispatch("/users/");
+      expect(result1).toEqual({ name: "users", remaining: "/" });
+
+      const result2 = r.dispatch("/users/42/");
+      expect(result2).toEqual({ name: "user", id: "42", remaining: "/" });
+    });
+
+    it("allows partial matches when configured at router level", () => {
+      const r = router({ partialMatch: true })
+        .on(path("/users"), () => "users")
+        .on(path("/users", string("id")), () => "usersById");
+
+      expect(r.dispatch("/users")).toEqual("users");
+      expect(r.dispatch("/users/42")).toEqual("usersById");
+
+      // Now partial match is allowed
+      expect(r.dispatch("/users/42/settings")).toEqual("usersById");
+    });
+
+    it("allows dispatch-time override from partial to exact", () => {
+      const r = router({ partialMatch: true })
+        .on(path("/users"), () => "users")
+        .on(path("/users", string("id")), () => "user");
+
+      expect(r.dispatch("/users/42/settings")).toEqual("user");
+      expect(r.dispatch("/users/42/settings", { partialMatch: false })).toEqual(
+        null,
+      );
     });
   });
 });

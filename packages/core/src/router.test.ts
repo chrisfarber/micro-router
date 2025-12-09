@@ -83,6 +83,13 @@ describe("router", () => {
       expect(r.dispatch("/users/42/settings")).toEqual(1);
     });
 
+    it("chooses the first match when multiple paths match on equal length", () => {
+      const r = router({ comparator: longestMatchComparator })
+        .on(path("/users", string("id")), () => 1)
+        .on(path("/users/1234"), () => 0);
+
+      expect(r.dispatch("/users/1234")).toEqual(1);
+    });
   });
 
   describe(".exhaustive()", () => {
@@ -109,7 +116,7 @@ describe("router", () => {
       let bye = r.dispatch("/unknown");
       expect(bye).toEqual("goodbye");
       // @ts-expect-error should be statically known to be `"hello" | "goodbye"`
-      bye = "i defy your expectations";
+      bye = "disallowed";
       // but this should be permissible:
       bye = "hello";
       // @ts-expect-error and we know the return is not nullable

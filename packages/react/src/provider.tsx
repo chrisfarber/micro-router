@@ -1,3 +1,4 @@
+import { BrowserHistory } from "@micro-router/history";
 import {
   createContext,
   type FC,
@@ -6,10 +7,9 @@ import {
   useEffect,
   useMemo,
 } from "react";
-import type { History } from "@micro-router/history";
 import { type INavigator, Navigator } from "./navigator";
 
-const NavigatorContext = createContext<Navigator | null>(null);
+const NavigatorContext = createContext<INavigator | null>(null);
 
 export const useNavigator = (): INavigator => {
   const navigator = useContext(NavigatorContext);
@@ -21,19 +21,21 @@ export const useNavigator = (): INavigator => {
   return navigator;
 };
 
-export const NavigatorProvider: FC<PropsWithChildren<{ history: History }>> = ({
-  history,
-  children,
-}) => {
-  const navigator = useMemo(() => new Navigator(history), [history]);
+export const NavigatorProvider: FC<
+  PropsWithChildren<{ navigator?: INavigator }>
+> = ({ navigator, children }) => {
+  const nav = useMemo(
+    () => navigator ?? new Navigator(new BrowserHistory()),
+    [navigator],
+  );
   useEffect(() => {
-    navigator.start();
+    nav.start();
     return () => {
-      navigator.stop();
+      nav.stop();
     };
-  }, [navigator]);
+  }, [nav]);
   return (
-    <NavigatorContext.Provider value={navigator}>
+    <NavigatorContext.Provider value={nav}>
       {children}
     </NavigatorContext.Provider>
   );

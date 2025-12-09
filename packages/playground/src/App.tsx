@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { bestMatch, Link, match, NavigatorProvider } from "@micro-router/react";
+import {
+  routeSwitch,
+  Link,
+  route,
+  NavigatorProvider,
+} from "@micro-router/react";
 import { number, path, string } from "@micro-router/core";
 import "./App.css";
 import { Go } from "./Go";
 import { WhereAmI } from "./WhereAmI";
-import { BrowserHistory } from "@micro-router/history";
 
 const BasePath = path("/base");
 const MessagesPath = path(BasePath, "messages");
@@ -12,18 +16,20 @@ const MessageByIdPath = path(MessagesPath, string("messageId"));
 const MessageEditPath = path(MessageByIdPath, "edit", string("part"));
 const SubMessageEditPath = path(MessageEditPath, number("entropy"));
 
+const ConflictingPath = path("hi", string("ref"));
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TreeShakeMe = path(SubMessageEditPath, "tree-shake-me");
 
-const BasePage = match(BasePath, () => <h4>BasePath</h4>);
+const BaseRoute = route(BasePath, () => <h4>BasePath</h4>);
 
 const MessageLink = (params: { messageId: string }) => (
-  <Link to={MessageByIdPath} params={params}>
+  <Link to={MessageByIdPath} {...params}>
     View Message {params.messageId}
   </Link>
 );
 
-const MessagesPage = match(MessagesPath, () => (
+const MessagesRoute = route(MessagesPath, () => (
   <div>
     <h4>MessagesPath</h4>
     <ul>
@@ -40,7 +46,7 @@ const MessagesPage = match(MessagesPath, () => (
   </div>
 ));
 
-const MessageEditPage = match(MessageEditPath, params => {
+const MessageEditRoute = route(MessageEditPath, params => {
   const [ctr, setCtr] = useState(0);
   return (
     <div>
@@ -62,7 +68,7 @@ const MessageEditPage = match(MessageEditPath, params => {
   );
 });
 
-const MessagePage = match(MessageByIdPath, params => {
+const MessageRoute = route(MessageByIdPath, params => {
   return (
     <div>
       <h4>MessageByIdPath</h4>
@@ -71,7 +77,7 @@ const MessagePage = match(MessageByIdPath, params => {
   );
 });
 
-const SubMessageEditPage = match(SubMessageEditPath, params => {
+const SubMessageEditRoute = route(SubMessageEditPath, params => {
   return (
     <div>
       <h3>SubMessageEditPage</h3>
@@ -84,24 +90,25 @@ const PageNotFound = () => {
   return <h2>404!</h2>;
 };
 
-const AppPages = bestMatch({
-  of: [
-    BasePage,
-    MessagesPage,
-    MessagePage,
-    MessageEditPage,
-    SubMessageEditPage,
+const AppRoutes = routeSwitch({
+  routes: [
+    BaseRoute,
+    MessagesRoute,
+    MessageRoute,
+    MessageEditRoute,
+    SubMessageEditRoute,
   ],
-  // these ultimately could be props of the resulting `AppPages` component:
   fallback: <PageNotFound />,
-  exact: true,
 });
 // AppPages.displayName = "App Pages";
 
 function App() {
   return (
     <>
-      <NavigatorProvider history={new BrowserHistory()}>
+      <NavigatorProvider>
+        <Link to={ConflictingPath} data={{ ref: "aeou" }}>
+          aoeu
+        </Link>
         <div className="App">
           <p>
             <Go title="< Back" offset={-1} />
@@ -109,16 +116,7 @@ function App() {
             <Go title="Forward >" offset={1} />
           </p>
 
-          <AppPages />
-
-          <BasePage exact>
-            <h3>👀 looks like you are on the base page</h3>
-            <p>
-              As an experiment, I decided to make it possible to pass children
-              into MatchComponent. If children are provided, they will be
-              rendered instead of the MatchComponent normal content.
-            </p>
-          </BasePage>
+          <AppRoutes />
 
           <h3>Links</h3>
           <div>
@@ -130,27 +128,26 @@ function App() {
                 <Link to={MessagesPath}>{MessagesPath.make(null)}</Link>
               </li>
               <li>
-                <Link to={MessageByIdPath} params={{ messageId: "4" }}>
+                <Link to={MessageByIdPath} messageId="4">
                   {MessageByIdPath.make({ messageId: "4" })}
                 </Link>
               </li>
               <li>
-                <Link to={MessageByIdPath} params={{ messageId: "5" }}>
+                <Link to={MessageByIdPath} messageId="5">
                   {MessageByIdPath.make({ messageId: "5" })}
                 </Link>
               </li>
               <li>
-                <Link
-                  to={MessageEditPath}
-                  params={{ messageId: "44", part: "5" }}
-                >
+                <Link to={MessageEditPath} messageId="44" part="5">
                   {MessageEditPath.make({ messageId: "44", part: "5" })}
                 </Link>
               </li>
               <li>
                 <Link
                   to={SubMessageEditPath}
-                  params={{ messageId: "32", part: "16", entropy: 420 }}
+                  messageId="32"
+                  part="16"
+                  entropy={420}
                 >
                   {SubMessageEditPath.make({
                     messageId: "32",

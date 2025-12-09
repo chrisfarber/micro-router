@@ -2,11 +2,14 @@ packages:
   - packages/*
 
 catalog:
+  '@vitest/browser-playwright': ^4.0.16
+  playwright: 1.57.0
   rollup-plugin-visualizer: ^5.14.0
   tsdown: ^0.18.2
   typescript: ^5.9.3
   vite: ^7.3.0
   vitest: ^4.0.16
+  vitest-browser-react: ^2.0.2
 
 onlyBuiltDependencies:
   - '@swc/core'

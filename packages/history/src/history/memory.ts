@@ -48,7 +48,6 @@ export class MemoryHistory implements History {
   }
 
   observe(): () => void {
-    throw new Error("not implemented");
     return () => {};
   }
 }

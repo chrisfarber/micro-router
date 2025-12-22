@@ -56,8 +56,4 @@ describe("MemoryHistory", () => {
     history.go(10);
     expect(history.index).toBe(history.history.length - 1);
   });
-
-  it("should throw on observe()", () => {
-    expect(() => history.observe()).toThrowError("not implemented");
-  });
 });

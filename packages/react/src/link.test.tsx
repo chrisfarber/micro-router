@@ -136,6 +136,61 @@ describe("Link", () => {
       await expect.element(link).toHaveClass("nav-link");
       await expect.element(link).toHaveAttribute("tabindex", "0");
     });
+
+    it("forwards aria-label to the anchor", async () => {
+      const { page } = await renderWithNavigator(
+        <Link to="/test" aria-label="Accessible link">
+          Link
+        </Link>,
+      );
+      const link = page.getByRole("link", { name: "Accessible link" });
+      await expect.element(link).toBeVisible();
+    });
+
+    it("forwards aria-current to the anchor", async () => {
+      const { page } = await renderWithNavigator(
+        <Link to="/test" aria-current="page">
+          Current Page
+        </Link>,
+      );
+      const link = page.getByRole("link", { name: "Current Page" });
+      await expect.element(link).toHaveAttribute("aria-current", "page");
+    });
+
+    it("forwards aria-describedby to the anchor", async () => {
+      const { page } = await renderWithNavigator(
+        <Link to="/test" aria-describedby="description-id">
+          Described Link
+        </Link>,
+      );
+      const link = page.getByRole("link", { name: "Described Link" });
+      await expect
+        .element(link)
+        .toHaveAttribute("aria-describedby", "description-id");
+    });
+
+    it("forwards data-* attributes to the anchor", async () => {
+      const { page } = await renderWithNavigator(
+        <Link to="/test" data-testid="my-link" data-custom="value">
+          Data Link
+        </Link>,
+      );
+      const link = page.getByTestId("my-link");
+      await expect.element(link).toBeVisible();
+      await expect.element(link).toHaveAttribute("data-custom", "value");
+    });
+
+    it("does not forward path data props to the anchor", async () => {
+      const UserPath = path("users", number("userId"));
+      const { page } = await renderWithNavigator(
+        <Link to={UserPath} userId={42} aria-label="User link">
+          User
+        </Link>,
+      );
+      const link = page.getByRole("link", { name: "User link" });
+      await expect.element(link).toHaveAttribute("href", "/users/42");
+      await expect.element(link).not.toHaveAttribute("userId");
+    });
   });
 
   describe("children", () => {

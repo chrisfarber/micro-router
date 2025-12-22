@@ -1,8 +1,10 @@
+/* eslint-disable react-hooks/refs */
 import { type DataOfPath, type Path } from "@micro-router/core";
 import {
   useCallback,
   useMemo,
   type AnchorHTMLAttributes,
+  type AriaAttributes,
   type MouseEvent,
   type PropsWithChildren,
   type RefObject,
@@ -17,7 +19,17 @@ const FORWARDED_PROPS = [
   "tabIndex",
 ] as const satisfies (keyof AnchorHTMLAttributes<unknown>)[];
 type ForwardedPropKeys = (typeof FORWARDED_PROPS)[number];
-type ForwardedProps = Pick<AnchorHTMLAttributes<unknown>, ForwardedPropKeys>;
+type DataAttributes = {
+  [key: `data-${string}`]: string | number | boolean | undefined;
+};
+type ForwardedProps = Pick<AnchorHTMLAttributes<unknown>, ForwardedPropKeys> &
+  AriaAttributes &
+  DataAttributes;
+
+const shouldForwardProp = (key: string): boolean =>
+  (FORWARDED_PROPS as readonly string[]).includes(key) ||
+  key.startsWith("aria-") ||
+  key.startsWith("data-");
 
 type LinkBaseProps<P extends Path | string> = PropsWithChildren<
   { to: P; ref?: RefObject<HTMLAnchorElement> } & ForwardedProps
@@ -101,18 +113,17 @@ export const Link = <P extends Path | string>(props: LinkProps<P>) => {
    * path's data keys, then its data must be passed in under the `data` prop,
    * instead of specifying the data inline with our props.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, react-hooks/refs
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const data: DataOf<P> = props[EXPLICIT_DATA_PROP_KEY] ?? props;
   const nav = useNavigator();
-  // eslint-disable-next-line react-hooks/refs
   const href: string = useMemo(() => pathToString(path, data), [path, data]);
   const anchorProps = useMemo(() => {
     const anchorProps: Record<string, unknown> = {};
-    for (const toForward of FORWARDED_PROPS) {
-      // eslint-disable-next-line react-hooks/refs
-      anchorProps[toForward] = props[toForward];
+    for (const key of Object.keys(props)) {
+      if (shouldForwardProp(key)) {
+        anchorProps[key] = props[key as keyof typeof props];
+      }
     }
-    // eslint-disable-next-line react-hooks/refs
     anchorProps["ref"] = props.ref;
     return anchorProps;
   }, [props]);

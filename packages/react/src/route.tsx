@@ -23,6 +23,7 @@ type BuildRouteOpts<P extends Path> = {
   exact: boolean;
 };
 
+/* @__NO_SIDE_EFFECTS__ */
 const buildRoute = <P extends Path>({
   path,
   render,
@@ -53,6 +54,7 @@ const buildRoute = <P extends Path>({
  *
  * To decide between a list of route or match components, use `routeSwitch`.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const route = <P extends Path>(
   path: P,
   render: FC<DataOfPath<P>>,
@@ -66,6 +68,7 @@ export const route = <P extends Path>(
  *
  * To decide between a list of route or match components, use `routeSwitch`.
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const match = <P extends Path>(
   path: P,
   render: FC<DataOfPath<P>>,
@@ -108,6 +111,7 @@ export type RouteSwitchOpts = {
  * }
  * ```
  */
+/* @__NO_SIDE_EFFECTS__ */
 export const routeSwitch = ({
   routes,
   comparator,

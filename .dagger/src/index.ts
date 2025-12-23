@@ -38,11 +38,11 @@ export class MicroRouter {
       .container()
       .from("node:24")
       .withEnvVariable("CI", "true")
+      .withMountedCache("/root/.cache/node", nodeCache)
+      .withMountedCache("/root/.local/share/pnpm/store", pnpmCache)
       .withExec(["npx", "playwright@1.57.0", "install", "--with-deps"])
       .withDirectory("/src", this.source)
       .withWorkdir("/src")
-      .withMountedCache("/root/.cache/node", nodeCache)
-      .withMountedCache("/root/.local/share/pnpm/store", pnpmCache)
       .withExec(["corepack", "enable"])
       .withExec(["pnpm", "install", "--frozen-lockfile"]);
   }

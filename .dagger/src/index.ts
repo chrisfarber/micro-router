@@ -55,4 +55,12 @@ export class MicroRouter {
       .withExec(["pnpm", "turbo", "lint"])
       .withExec(["pnpm", "turbo", "test"]);
   }
+
+  @func()
+  buildDocs(): Directory {
+    return this.container()
+      .withExec(["pnpm", "turbo", "build"])
+      .withExec(["pnpm", "docs:build"])
+      .directory("/src/docs");
+  }
 }

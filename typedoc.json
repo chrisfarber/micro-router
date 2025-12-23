@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "@micro-router",
+  "entryPointStrategy": "packages",
+  "entryPoints": ["packages/core", "packages/history", "packages/react"],
+  "packageOptions": {
+    "entryPoints": ["src/index.ts"],
+    "includeVersion": true
+  }
+}

@@ -1,12 +1,11 @@
 import type { ConstPath, DataOfPath, Path } from "@micro-router/core";
 import type { History, Location } from "@micro-router/history";
 
+/** @inline */
 type Listener = (l: Location) => void;
+/** @inline */
 type StopListening = () => void;
 
-/**
- * The
- */
 export interface INavigator {
   /**
    * Start listening and responding to history events.

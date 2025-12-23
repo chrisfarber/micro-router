@@ -10,7 +10,7 @@ import type {
   DataOfPath,
 } from "./definitions";
 
-type WrapTypeIndicator<P extends string> =
+export type WrapTypeIndicator<P extends string> =
   P extends TypeIndicator<infer T>
     ? T extends "string"
       ? ""

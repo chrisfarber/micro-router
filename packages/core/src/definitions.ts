@@ -56,13 +56,15 @@ export type MatchFailure = {
   readonly ok: false;
   readonly cause?: Error;
 };
-export type MatchSuccess<P = any> = {
+export type MatchSuccess<Data = any> = {
   readonly ok: true;
-  readonly data: P;
+  readonly data: Data;
   readonly remaining: string;
   readonly captures: number;
 };
 export type MatchResult<P = any> = MatchFailure | MatchSuccess<P>;
+
+export type MatchSuccessForPath<P extends Path> = MatchSuccess<DataOfPath<P>>;
 
 export type StripLeadingSlash<S extends string> = S extends `/${infer R}`
   ? StripLeadingSlash<R>

@@ -9,7 +9,7 @@ import type {
 import { segment } from "./segment";
 import { matchText } from "./text";
 
-type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
+export type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
 /**
  * A path that matches on complete segments of the input text.
  *
@@ -29,6 +29,7 @@ export const textSegments = <T extends string>(path: T): TextSegments<T> => {
   ) as TextSegments<T>;
 };
 
+/** @inline */
 type PathOrText = Path | string;
 type PathOrTextToPath<P extends PathOrText> = P extends string
   ? Path<LeadingSlash<P>, NoData>
@@ -65,10 +66,15 @@ type CombinedPath<Ps extends PathOrText[]> = Ps extends [
 /**
  * Define a Path by combining the individual input `paths` in order.
  *
- * This is the recommended way to construct paths.
+ * This is the typical way to construct paths.
  *
  * The inputs can be other paths or literal strings. Any literal strings provided will be converted into
  * paths by use of the `textSegments` path constructor.
+ *
+ * @example
+ * ```ts
+ * path("users", string("userId")); // Path<"/users/:userId", { userId: string }>
+ * ```
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const path = <Ps extends PathOrText[]>(

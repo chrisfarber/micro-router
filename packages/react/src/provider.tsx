@@ -11,6 +11,10 @@ import { type INavigator, Navigator } from "./navigator";
 
 const NavigatorContext = createContext<INavigator | null>(null);
 
+/**
+ * Retrieve the navigator from the `<NavigatorProvider>`'s
+ * react context.
+ */
 export const useNavigator = (): INavigator => {
   const navigator = useContext(NavigatorContext);
   if (!navigator) {
@@ -21,6 +25,12 @@ export const useNavigator = (): INavigator => {
   return navigator;
 };
 
+/**
+ * Provides a navigator via a react context.
+ *
+ * You may provide your own navigator. If you do not, a navigator will be
+ * constructed for you using `BrowserHistory`.
+ */
 export const NavigatorProvider: FC<
   PropsWithChildren<{ navigator?: INavigator }>
 > = ({ navigator, children }) => {

@@ -1,6 +1,6 @@
 {
   "name": "@micro-router/core",
-  "description": "a combinator library for defining, matching, and extracting data from paths",
+  "description": "a library for defining paths and parsing data from them",
   "version": "0.0.1",
   "author": {
     "name": "Chris Farber",

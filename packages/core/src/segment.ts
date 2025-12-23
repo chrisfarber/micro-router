@@ -13,7 +13,7 @@ const ensureLeadingSlash = <S extends string>(s: S): LeadingSlash<S> => {
   return `/${s}` as LeadingSlash<S>;
 };
 
-type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_data"]>;
+export type Segment<P extends Path> = Path<LeadingSlash<P["path"]>, P["_data"]>;
 /**
  * A segment considers the contents between the start of the string (ignoring any initial path
  * separator) and the first encountered path separator ("/").

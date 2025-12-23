@@ -4,18 +4,24 @@ export type {
   MatchFailure,
   MatchResult,
   MatchSuccess,
+  MatchSuccessForPath,
   NoData,
   Path,
   ValidData,
+  LeadingSlash,
+  ReadableRepresentationOfPath,
+  StringTypeIndicator,
+  StripLeadingSlash,
+  TypeIndicator,
 } from "./definitions";
 
 export { isExactMatch } from "./matches";
 
 export { matchRegexp, type MatchRegexpOpts } from "./regexp";
 
-export { keyAs } from "./key-as";
-export { mapData } from "./map-data";
-export { segment } from "./segment";
+export { keyAs, type WrapTypeIndicator } from "./key-as";
+export { mapData, type Isomorphism, type MappedPath } from "./map-data";
+export { segment, type Segment } from "./segment";
 
 export { matchNumber, number } from "./number";
 export { matchString, string } from "./string";
@@ -24,10 +30,11 @@ export {
   matchTextEnum,
   textEnum,
   type MatchTextOptions,
+  type JoinStringTypes,
 } from "./text";
 
 export { concat } from "./concat";
-export { path, textSegments } from "./path";
+export { path, textSegments, type TextSegments } from "./path";
 
 export {
   bestMatchComparator,
@@ -35,4 +42,7 @@ export {
   router,
   type MatchComparator,
   type RouterOpts,
+  type Router,
+  type DispatchOpts,
+  type RouteHandler,
 } from "./router";

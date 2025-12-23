@@ -8,8 +8,11 @@ import {
 import { type FC, type ReactNode } from "react";
 import { useLocation, usePathMatch } from "./hooks";
 
-export type Route<P extends Path = Path> = {
+export type RouteComponent<P extends Path = Path> = {
   path: P;
+  /**
+   * The inner component that will be rendered when the associated path matches.
+   */
   Matched: FC<DataOfPath<P>>;
   exact: boolean;
 } & FC;
@@ -24,7 +27,7 @@ const buildRoute = <P extends Path>({
   path,
   render,
   exact,
-}: BuildRouteOpts<P>): Route<P> => {
+}: BuildRouteOpts<P>): RouteComponent<P> => {
   const Matched: FC<DataOfPath<P>> = render;
   Matched.displayName = `Matched: ${path.path}`;
 
@@ -35,7 +38,7 @@ const buildRoute = <P extends Path>({
   };
   Outer.displayName = `${exact ? "Route" : "Match"}: ${path.path}`;
 
-  const Matcher = Outer as Route<P>;
+  const Matcher = Outer as RouteComponent<P>;
   Matcher.path = path;
   Matcher.Matched = Matched;
   Matcher.exact = exact;
@@ -53,7 +56,7 @@ const buildRoute = <P extends Path>({
 export const route = <P extends Path>(
   path: P,
   render: FC<DataOfPath<P>>,
-): Route<P> => buildRoute({ path, render, exact: true });
+): RouteComponent<P> => buildRoute({ path, render, exact: true });
 
 /**
  * Build a match component for a path.
@@ -66,14 +69,11 @@ export const route = <P extends Path>(
 export const match = <P extends Path>(
   path: P,
   render: FC<DataOfPath<P>>,
-): Route<P> => buildRoute({ path, render, exact: false });
+): RouteComponent<P> => buildRoute({ path, render, exact: false });
 
-export type RouteConfig = {
-  route: Route;
-};
-
+/** @inline */
 export type RouteSwitchOpts = {
-  routes: Route[];
+  routes: RouteComponent[];
   comparator?: MatchComparator;
   fallback?: ReactNode;
 };
@@ -86,9 +86,7 @@ export type RouteSwitchOpts = {
  * the single best match based on specificity and path depth. This ensures only
  * one route component is rendered at a time.
  *
- * @param of - Array of PathMatchComponents (created with `match()`) to choose from
- * @param fallback - Optional ReactNode to render when no routes match (e.g., a 404 page)
- * @returns A React component that renders the best matching route
+ * @returns A React component that renders its best matching route
  *
  * @example
  * ```tsx
@@ -96,13 +94,17 @@ export type RouteSwitchOpts = {
  * const AboutRoute = route(path("/about"), () => <h1>About</h1>);
  * const NotFound = () => <h1>404 Not Found</h1>;
  *
- * const AppRouter = routeSwitch({
+ * const AppRoutes = routeSwitch({
  *   of: [HomeRoute, AboutRoute],
  *   fallback: <NotFound />
  * });
  *
  * function App() {
- *   return <AppRouter />;
+ *   return (
+ *     <NavigatorProvider>
+ *       <AppRoutes />
+ *     </NavigatorProvider>
+ *   );
  * }
  * ```
  */
@@ -111,21 +113,22 @@ export const routeSwitch = ({
   comparator,
   fallback,
 }: RouteSwitchOpts): FC => {
-  const matches = router<ReactNode>({ partialMatch: true, comparator }).default(
-    () => fallback,
-  );
-  for (const MatchComponent of routes) {
-    matches.on(MatchComponent.path, match => {
-      if (MatchComponent.exact && !isExactMatch(match)) {
+  const matcher = router<ReactNode>({
+    partialMatch: true,
+    comparator,
+  }).default(() => fallback);
+  for (const RouteComponent of routes) {
+    matcher.on(RouteComponent.path, match => {
+      if (RouteComponent.exact && !isExactMatch(match)) {
         return fallback;
       }
-      return <MatchComponent.Matched {...match.data} />;
+      return <RouteComponent.Matched {...match.data} />;
     });
   }
 
   const RouteSwitch: FC = () => {
     const loc = useLocation();
-    return matches.dispatch(loc.pathname);
+    return matcher.dispatch(loc.pathname);
   };
   RouteSwitch.displayName = `RouteSwitch of ${routes.length.toFixed(0)} routes`;
 

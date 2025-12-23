@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import type { DataOfPath, MatchSuccess, Path } from "./definitions";
+import type { MatchSuccess, MatchSuccessForPath, Path } from "./definitions";
 
-type MatchSuccessForPath<P extends Path> = MatchSuccess<DataOfPath<P>>;
-type RouteHandler<P extends Path = Path, R = unknown> = (
+export type RouteHandler<P extends Path = Path, R = unknown> = (
   result: MatchSuccessForPath<P>,
 ) => R;
 type HandlerPair<P extends Path = Path, R = unknown> = [P, RouteHandler<P, R>];
@@ -236,16 +235,13 @@ export type Router<
 };
 
 /**
- * Construct a Router.
+ * Construct a router.
  *
  * Routers may be used for side effects or for computing values. In either case,
  * a `Result` type may be provided. When provided, the router will ensure that
  * handlers' return values match the provided `Result` type. Otherwise, handlers
  * will be allowed to return any type of data; the router's `.dispatch()` method
  * will then indicate all of the possible types that could be returned.
- *
- * Routers are inherently mutable, but, should only be used in a builder style.
- * This allows the type system to collect information about the various handlers.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const router = <Result = never>(

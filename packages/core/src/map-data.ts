@@ -7,7 +7,7 @@ import {
   type DataOfPath,
 } from "./definitions";
 
-type Isomorphism<L, R> = {
+export type Isomorphism<L, R> = {
   to: (left: L) => R;
   from: (right: R) => L;
 };

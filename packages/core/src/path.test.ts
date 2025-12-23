@@ -49,6 +49,11 @@ describe("path", () => {
     expect(notBlank.match("/l/hello/bye").ok).toBeTruthy();
   });
 
+  it("generates a single slash for a root path", () => {
+    const root = path("/");
+    expect(root.make(null)).toEqual("/");
+  });
+
   it("matches and generates on a complex example", () => {
     const p = path(path("a", "/b", string("c")), "d/e", string("f"));
     const descr: (typeof p)["path"] = "/a/b/:c/d/e/:f";

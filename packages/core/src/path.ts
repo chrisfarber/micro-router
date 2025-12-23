@@ -19,13 +19,12 @@ export type TextSegments<T extends string> = ConstPath<LeadingSlash<T>>;
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const textSegments = <T extends string>(path: T): TextSegments<T> => {
-  // although kind of elegant, if this proves to be a performance bottleneck, I should refactor this
-  // to simply be a single text match + a check that we've consumed the end of the current segment.
+  const parts = path.split("/").filter(part => part !== "");
+  if (parts.length === 0) {
+    parts.push("");
+  }
   return concat(
-    ...path
-      .split("/")
-      .filter(part => part !== "")
-      .map(part => segment(matchText(part))),
+    ...parts.map(part => segment(matchText(part))),
   ) as TextSegments<T>;
 };
 

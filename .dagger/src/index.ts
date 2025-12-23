@@ -32,11 +32,15 @@ export class MicroRouter {
 
   @func()
   container(): Container {
+    const pnpmCache = dag.cacheVolume("pnpm-store");
+    const nodeCache = dag.cacheVolume("node");
     return dag
       .container()
       .from("node:24")
       .withDirectory("/src", this.source)
       .withWorkdir("/src")
+      .withMountedCache("/root/.cache/node", nodeCache)
+      .withMountedCache("/root/.local/share/pnpm/store", pnpmCache)
       .withExec(["corepack", "enable"])
       .withExec(["pnpm", "install", "--frozen-lockfile"]);
   }

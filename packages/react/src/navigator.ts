@@ -68,12 +68,17 @@ export class Navigator implements INavigator {
   }
 
   push(path: string | Path, params?: unknown): void {
-    if (typeof path === "string") {
-      this.history.push(path);
-    } else {
-      this.history.push(path.make(params || {}));
+    const target = typeof path === "string" ? path : path.make(params || {});
+    if (target === this.currentLocationString()) {
+      return;
     }
+    this.history.push(target);
     this.updateAndNotify();
+  }
+
+  private currentLocationString(): string {
+    const loc = this._location;
+    return loc.pathname + loc.search + loc.hash;
   }
 
   replace(path: string | Path, params?: unknown): void {

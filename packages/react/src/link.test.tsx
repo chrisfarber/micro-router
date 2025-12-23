@@ -234,5 +234,31 @@ describe("Link", () => {
       await userEvent.click(page.getByRole("link", { name: "Click me" }));
       expect(navigator.location.pathname).toEqual("/somewhere");
     });
+
+    it("clicking a link to the current page does not create duplicate history entries", async () => {
+      const { page, navigator } = await renderWithNavigator(
+        <>
+          <Link to="/page-one">Page One</Link>
+          <Link to="/page-two">Page Two</Link>
+        </>,
+        "/page-one",
+      );
+
+      // Navigate to page-two first to establish a history entry
+      await userEvent.click(page.getByRole("link", { name: "Page Two" }));
+      expect(navigator.location.pathname).toEqual("/page-two");
+
+      // Click the same link multiple times - should not add duplicate entries
+      await userEvent.click(page.getByRole("link", { name: "Page Two" }));
+      await userEvent.click(page.getByRole("link", { name: "Page Two" }));
+      await userEvent.click(page.getByRole("link", { name: "Page Two" }));
+
+      // Should still be on page-two
+      expect(navigator.location.pathname).toEqual("/page-two");
+
+      // Navigate back once - should go directly to page-one, not to a duplicate page-two
+      navigator.go(-1);
+      await expect.poll(() => navigator.location.pathname).toEqual("/page-one");
+    });
   });
 });

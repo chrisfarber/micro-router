@@ -15,14 +15,14 @@ export class MicroRouter {
     @argument({
       defaultPath: ".",
       ignore: [
-        "node_modules",
         "**/node_modules",
-        ".turbo",
+        "**/*.tsbuildinfo",
+        "**/.turbo",
+        "**/dist",
         ".dagger",
         ".claude",
         ".git",
         ".jj",
-        "packages/**/dist",
       ],
     })
     source: Directory,

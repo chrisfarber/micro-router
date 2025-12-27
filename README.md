@@ -307,7 +307,7 @@ Feedback, issues, and pull requests are welcome.
 ## Further reading
 
 Full API documentation is available at
-[PLACEHOLDER_DOCS_URL](PLACEHOLDER_DOCS_URL).
+[https://chrisfarber.github.io/micro-router](https://chrisfarber.github.io/micro-router/).
 
 This repository also has an [example app](./packages/playground) that is worth
 looking at.

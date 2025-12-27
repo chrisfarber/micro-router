@@ -40,9 +40,11 @@ describe("textSegments", () => {
 
 describe("path", () => {
   it("defines successfully", () => {
-    // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
     const blank = path();
-    expect(blank).toBeUndefined();
+    expect(blank).toBeDefined();
+    expect(blank.match("/").ok).toBeTruthy();
+    expect(blank.match("").ok).toBeTruthy();
+    expect(blank.make(null)).toEqual("/");
 
     const notBlank = path("l/hello");
     expect(notBlank).toBeDefined();

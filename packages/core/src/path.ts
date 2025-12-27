@@ -34,33 +34,35 @@ type PathOrTextToPath<P extends PathOrText> = P extends string
   ? Path<LeadingSlash<P>, NoData>
   : P;
 type DataOfPT<P extends PathOrText> = DataOfPath<PathOrTextToPath<P>>;
-type CombinedPath<Ps extends PathOrText[]> = Ps extends [
-  infer P extends PathOrText,
-  infer P2 extends PathOrText,
-  ...infer Rest extends PathOrText[],
-]
-  ? CombinedPath<
-      [
-        Path<
-          `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
-          DataOfPT<P> extends NoData
-            ? DataOfPT<P2>
-            : DataOfPT<P2> extends NoData
-              ? DataOfPT<P>
-              : {
-                  [K in
-                    | keyof DataOfPT<P>
-                    | keyof DataOfPT<P2>]: K extends keyof DataOfPT<P2>
-                    ? DataOfPT<P2>[K]
-                    : K extends keyof DataOfPT<P>
-                      ? DataOfPT<P>[K]
-                      : never;
-                }
-        >,
-        ...Rest,
+type CombinedPath<Ps extends PathOrText[]> = Ps extends []
+  ? Path<"/", NoData>
+  : Ps extends [
+        infer P extends PathOrText,
+        infer P2 extends PathOrText,
+        ...infer Rest extends PathOrText[],
       ]
-    >
-  : PathOrTextToPath<Ps[0]>;
+    ? CombinedPath<
+        [
+          Path<
+            `${PathOrTextToPath<P>["path"]}${PathOrTextToPath<P2>["path"]}`,
+            DataOfPT<P> extends NoData
+              ? DataOfPT<P2>
+              : DataOfPT<P2> extends NoData
+                ? DataOfPT<P>
+                : {
+                    [K in
+                      | keyof DataOfPT<P>
+                      | keyof DataOfPT<P2>]: K extends keyof DataOfPT<P2>
+                      ? DataOfPT<P2>[K]
+                      : K extends keyof DataOfPT<P>
+                        ? DataOfPT<P>[K]
+                        : never;
+                  }
+          >,
+          ...Rest,
+        ]
+      >
+    : PathOrTextToPath<Ps[0]>;
 
 /**
  * Define a Path by combining the individual input `paths` in order.
@@ -70,9 +72,12 @@ type CombinedPath<Ps extends PathOrText[]> = Ps extends [
  * The inputs can be other paths or literal strings. Any literal strings provided will be converted into
  * paths by use of the `textSegments` path constructor.
  *
+ * When called with no arguments, returns a root path that matches "/" or "".
+ *
  * @example
  * ```ts
  * path("users", string("userId")); // Path<"/users/:userId", { userId: string }>
+ * path(); // Path<"/", NoData> - matches root
  * ```
  */
 /* @__NO_SIDE_EFFECTS__ */
@@ -81,7 +86,7 @@ export const path = <Ps extends PathOrText[]>(
 ): CombinedPath<Ps> => {
   if (paths.length < 1) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-    return undefined as any;
+    return textSegments("/") as any;
   }
   return concat(
     ...paths.map(part => {

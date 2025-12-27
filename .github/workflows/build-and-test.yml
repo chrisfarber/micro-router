@@ -15,3 +15,4 @@ jobs:
         uses: dagger/dagger-for-github@v8.2.0
         with:
           call: build-and-test
+          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}

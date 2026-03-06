@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { MatchSuccess, MatchSuccessForPath, Path } from "./definitions";
+import { isExactMatch } from "./matches";
 
 export type RouteHandler<P extends Path = Path, R = unknown> = (
   result: MatchSuccessForPath<P>,
@@ -143,10 +144,7 @@ class RouterBuilder {
     for (const [path, handler] of this.#handlers) {
       const result = path.match(input);
       if (result.ok) {
-        // When requiring exact matches, treat trailing slash as exact
-        const isExactMatch =
-          result.remaining.length === 0 || result.remaining === "/";
-        if (!partialMatch && !isExactMatch) continue;
+        if (!partialMatch && !isExactMatch(result)) continue;
         if (!best || this.#comparator(best[0], result) > 0)
           best = [result, handler];
       }

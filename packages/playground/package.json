@@ -5,9 +5,6 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -b",
-    "lint": "pnpm run /^lint:[^:]*$/",
-    "lint:eslint": "eslint --max-warnings=0",
-    "lint:prettier": "prettier --ignore-path=../../.prettierignore --check .",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview"

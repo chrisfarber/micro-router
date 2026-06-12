@@ -52,7 +52,8 @@ export class MicroRouter {
     return this.container()
       .withExec(["pnpm", "turbo", "build"])
       .withExec(["pnpm", "turbo", "typecheck"])
-      .withExec(["pnpm", "turbo", "lint"])
+      .withExec(["pnpm", "exec", "oxlint"])
+      .withExec(["pnpm", "exec", "oxfmt", "--check"])
       .withExec(["pnpm", "turbo", "test"]);
   }
 

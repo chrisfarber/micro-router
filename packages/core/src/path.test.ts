@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { number } from "./number";
 import { path, textSegments } from "./path";
 import { string } from "./string";
-import type { MatchFailure, Path } from "./definitions";
 
 describe("textSegments", () => {
   it("generates the correct runtime description", () => {

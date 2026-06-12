@@ -1,7 +1,6 @@
 {
   "include": [],
   "references": [
-    { "path": "./tsconfig.node.json" },
     { "path": "./packages/core/tsconfig.json" },
     { "path": "./packages/history/tsconfig.json" },
     { "path": "./packages/react/tsconfig.json" }

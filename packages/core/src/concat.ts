@@ -46,7 +46,7 @@ export const concat = <Ps extends Path[]>(
         }
         remaining = matched.remaining;
         if (matched.data !== null) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment unicorn/no-useless-fallback-in-spread
           data = { ...(data ?? {}), ...matched.data };
         }
       }

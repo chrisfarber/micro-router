@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "bracketSpacing": true,
+  "jsxSingleQuote": false,
+  "printWidth": 80,
+  "proseWrap": "always",
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "arrowParens": "avoid",
+  "semi": true,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "dist",
+    "coverage",
+    "node_modules",
+    ".dagger",
+    "pnpm-lock.yaml",
+    "*.tsbuildinfo",
+    ".vscode/*",
+    "!.vscode/settings.json",
+    "!.vscode/tasks.json",
+    "!.vscode/launch.json",
+    "!.vscode/extensions.json"
+  ]
+}

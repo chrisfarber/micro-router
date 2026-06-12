@@ -6,7 +6,7 @@ export const NewDocumentPage = route(NewDocumentPath, () => {
   const navigator = useNavigator();
   const { createDocument } = useDocuments();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const title = formData.get("title") as string;

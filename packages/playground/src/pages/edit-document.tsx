@@ -24,7 +24,7 @@ export const EditDocumentPage = route(EditDocumentPath, ({ documentId }) => {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (title.trim()) {
       updateDocument(documentId, {

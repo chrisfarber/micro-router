@@ -64,7 +64,7 @@ describe("matchTextEnum", () => {
   it("errors when provided a string that is not one of its options", () => {
     const nums = matchTextEnum("one", "two", "three");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    expect(() => nums.make("four" as any)).toThrowError(
+    expect(() => nums.make("four" as any)).toThrow(
       "Invalid value for matchTextEnum: four",
     );
   });

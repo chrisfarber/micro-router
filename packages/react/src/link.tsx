@@ -40,9 +40,9 @@ export type LinkBaseProps<P extends Path | string> = PropsWithChildren<
 >;
 
 type IntrinsicProps = {
-  [k in keyof LinkBaseProps<string> as k extends ForwardedPropKeys
-    ? never
-    : k]: LinkBaseProps<string>[k];
+  [
+    k in keyof LinkBaseProps<string> as k extends ForwardedPropKeys ? never : k
+  ]: LinkBaseProps<string>[k];
 };
 type IntrinsicPropKeys = keyof IntrinsicProps;
 

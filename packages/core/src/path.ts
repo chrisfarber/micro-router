@@ -50,9 +50,9 @@ type CombinedPath<Ps extends PathOrText[]> = Ps extends []
               : DataOfPT<P2> extends NoData
                 ? DataOfPT<P>
                 : {
-                    [K in
-                      | keyof DataOfPT<P>
-                      | keyof DataOfPT<P2>]: K extends keyof DataOfPT<P2>
+                    [
+                      K in keyof DataOfPT<P> | keyof DataOfPT<P2>
+                    ]: K extends keyof DataOfPT<P2>
                       ? DataOfPT<P2>[K]
                       : K extends keyof DataOfPT<P>
                         ? DataOfPT<P>[K]

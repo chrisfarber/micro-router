@@ -1,153 +1,65 @@
 import { describe, expect, it } from "vitest";
-import { matchText, matchTextEnum, textEnum } from "./text";
+import { textEnum, textSegments } from "./text";
 
-describe("matchText", () => {
-  it("matches strings", () => {
-    const part = matchText("hello");
-    const nomatch = part.match("fooey");
-    expect(nomatch.ok).toBeFalsy();
-
-    const match = part.match("hellothere");
-    expect(match).toEqual({
-      ok: true,
-      data: null,
-      remaining: "there",
+describe("textSegments", () => {
+  it("constructs valid text segments", () => {
+    const segments = textSegments("hello/there");
+    const [hello] = segments;
+    expect(hello).toEqual({
+      type: "text",
       captures: 0,
-    });
-
-    expect(part.make(null)).toEqual("hello");
-  });
-
-  it("is case insensitive by default", () => {
-    const lc = matchText("lowercase");
-    const uc = matchText("LOWERCASE");
-
-    expect(lc.match("lowerCASE").ok).toBeTruthy();
-    expect(uc.match("lowerCASE").ok).toBeTruthy();
-    expect(uc.match("UPPERCASEuppercase").ok).toBeFalsy();
-  });
-
-  it("can be made case sensitive", () => {
-    const uc = matchText("LOWERCASE", { caseSensitive: true });
-    expect(uc.match("LOWERCASE").ok).toBeTruthy();
-    expect(uc.match("lowercaselowercase").ok).toBeFalsy();
-    expect(uc.match("UPPERCASE").ok).toBeFalsy();
-  });
-
-  it("has zero captures", () => {
-    expect(matchText("hello").captures).toBe(0);
-  });
-});
-
-describe("matchTextEnum", () => {
-  it("matches and errors as expected", () => {
-    const nums = matchTextEnum("one", "two", "three");
-    expect(nums.match("one")).toEqual({
-      ok: true,
-      data: "one",
-      remaining: "",
-      captures: 1,
-    });
-
-    expect(nums.match("twoooo")).toEqual({
-      ok: true,
-      data: "two",
-      remaining: "ooo",
-      captures: 1,
-    });
-
-    expect(nums.match("through")).toMatchObject({
-      ok: false,
+      optional: false,
+      repr: "hello",
+      text: "hello",
+      caseSensitive: false,
     });
   });
 
-  it("errors when provided a string that is not one of its options", () => {
-    const nums = matchTextEnum("one", "two", "three");
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    expect(() => nums.make("four" as any)).toThrow(
-      "Invalid value for matchTextEnum: four",
-    );
+  it("strips duplicate, leading, and trailing slashes", () => {
+    const segments = textSegments("////hello/////there/////");
+    expect(segments.map(s => s.text)).toEqual(["hello", "there"]);
   });
 
-  it("makes a valid path description", () => {
-    const nums = matchTextEnum("one", "two", "three");
-    expect(nums.path).toEqual("(one|two|three)");
-  });
-
-  it("has 1 capture", () => {
-    expect(matchTextEnum("red", "blue", "green").captures).toBe(1);
+  it("accepts caseSensitive and optional", () => {
+    const [hello, there] = textSegments("hello/there", {
+      caseSensitive: true,
+      optional: true,
+    });
+    for (const segment of [hello, there]) {
+      expect(segment).toMatchObject({ caseSensitive: true, optional: true });
+    }
   });
 });
 
 describe("textEnum", () => {
-  it("matches allowed values as a segment and returns keyed params", () => {
-    const color = textEnum({
-      key: "color",
-      options: ["red", "blue", "green"],
-    });
-    expect(color.match("/red")).toEqual({
-      ok: true,
-      data: { color: "red" },
-      remaining: "",
-      captures: 1,
-    });
-    expect(color.match("/blue/other")).toEqual({
-      ok: true,
-      data: { color: "blue" },
-      remaining: "/other",
-      captures: 1,
-    });
-    expect(color.match("/green")).toEqual({
-      ok: true,
-      data: { color: "green" },
-      remaining: "",
-      captures: 1,
-    });
-  });
-
-  it("does not match disallowed values", () => {
-    const color = textEnum({
-      key: "color",
-      options: ["red", "blue", "green"],
-    });
-    expect(color.match("/yellow")).toMatchObject({
-      ok: false,
-    });
-    expect(color.match("/")).toMatchObject({
-      ok: false,
-    });
-  });
-
-  it("makes a valid path description", () => {
-    const color = textEnum({
-      key: "color",
-      options: ["red", "blue", "green"],
-    });
-    const desc: (typeof color)["path"] = "/:color[(red|blue|green)]";
-    expect(color.path).toEqual(desc);
-  });
-
-  it("generates a path from params", () => {
-    const color = textEnum({
-      key: "color",
-      options: ["red", "blue", "green"],
-    });
-    expect(color.make({ color: "red" })).toEqual("/red");
-    expect(color.make({ color: "blue" })).toEqual("/blue");
-  });
-
-  it("throws if making a path with an invalid value", () => {
-    const color = textEnum({
-      key: "color",
-      options: ["red", "blue", "green"],
-    });
-    // @ts-expect-error intentionally providing a disallowed input
-    expect(() => color.make({ color: "yellow" })).toThrow();
-  });
-
   it("has 1 capture", () => {
-    expect(
-      textEnum({ key: "color", options: ["red", "blue", "green"] }).captures,
-    ).toBe(1);
+    expect(textEnum({ key: "lang", options: ["en"] }).captures).toBe(1);
+  });
+
+  it("matches case insensitively", () => {
+    const lang = textEnum({
+      key: "lang",
+      options: ["en", "FR", "de"],
+    });
+
+    expect(lang.codec.decode("EN")).toEqual({ ok: true, data: { lang: "en" } });
+    expect(lang.codec.decode("fr")).toEqual({ ok: true, data: { lang: "FR" } });
+    expect(lang.codec.decode("de")).toEqual({ ok: true, data: { lang: "de" } });
+
+    expect(lang.codec.decode("foo")).toEqual({ ok: false });
+  });
+
+  it("matches case sensitively", () => {
+    const lang = textEnum({
+      key: "lang",
+      options: ["en", "FR", "de"],
+      caseSensitive: true,
+    });
+
+    expect(lang.codec.decode("EN")).toEqual({ ok: false });
+    expect(lang.codec.decode("fr")).toEqual({ ok: false });
+    expect(lang.codec.decode("de")).toEqual({ ok: true, data: { lang: "de" } });
+
+    expect(lang.codec.decode("foo")).toEqual({ ok: false });
   });
 });

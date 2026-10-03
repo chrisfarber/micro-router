@@ -1,48 +1,50 @@
 export type {
+  NoData,
+  ValidData,
+  Path,
   ConstPath,
+  ParametricPath,
   DataOfPath,
-  MatchFailure,
+  Segment,
+  TextSegment,
+  DataSegment,
+  ReadableRepresentationOfPath,
   MatchResult,
   MatchSuccess,
   MatchSuccessForPath,
-  NoData,
-  Path,
-  ValidData,
-  LeadingSlash,
-  ReadableRepresentationOfPath,
-  StringTypeIndicator,
-  StripLeadingSlash,
+  MatchFailure,
+  MatchResultForPath,
   TypeIndicator,
+  StringTypeIndicator,
 } from "./definitions";
 
-export { isExactMatch } from "./matches";
+export type { LeadingSlash, StripLeadingSlash } from "./util";
 
-export { matchRegexp, type MatchRegexpOpts } from "./regexp";
-
-export { keyAs, type WrapTypeIndicator } from "./key-as";
-export { mapData, type Isomorphism, type MappedPath } from "./map-data";
-export { segment, type Segment } from "./segment";
-
-export { matchNumber, number } from "./number";
-export { matchString, string } from "./string";
+export { path, isExactMatch } from "./path";
+export { dataSegment, optional } from "./segment";
 export {
-  matchText,
-  matchTextEnum,
+  textSegments,
   textEnum,
-  type MatchTextOptions,
-  type JoinStringTypes,
+  type TextSegments,
+  type TextSegmentsOptions,
 } from "./text";
+export { string } from "./string";
+export { matchNumber, number } from "./number";
+export {
+  regexp,
+  type RegexpCodec,
+  type RegexpOptions,
+  type RegexpCodecOptions,
+} from "./regexp";
 
-export { concat } from "./concat";
-export { path, textSegments, type TextSegments } from "./path";
+export { type Prism, prism, mapPrism, identityPrism, keyBy } from "./prism";
+
+export { type Codec, codec, mapCodec } from "./codec";
 
 export {
-  bestMatchComparator,
-  longestMatchComparator,
-  router,
-  type MatchComparator,
-  type RouterOpts,
   type Router,
+  type RouterOpts,
   type DispatchOpts,
   type RouteHandler,
+  router,
 } from "./router";

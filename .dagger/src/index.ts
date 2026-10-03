@@ -40,7 +40,7 @@ export class MicroRouter {
       .withEnvVariable("CI", "true")
       .withMountedCache("/root/.cache/node", nodeCache)
       .withMountedCache("/root/.local/share/pnpm/store", pnpmCache)
-      .withExec(["npx", "playwright@1.57.0", "install", "--with-deps"])
+      .withExec(["npx", "playwright@1.64.1", "install", "--with-deps"])
       .withDirectory("/src", this.source)
       .withWorkdir("/src")
       .withExec(["corepack", "enable"])

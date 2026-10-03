@@ -89,7 +89,7 @@ export function matchTextEnum<const T extends readonly string[]>(
         if (input.startsWith(v)) {
           return {
             ok: true,
-            data: v as T[number],
+            data: v,
             remaining: input.substring(v.length),
             captures,
           };

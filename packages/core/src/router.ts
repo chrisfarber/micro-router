@@ -173,9 +173,9 @@ export type Router<
    */
   on<
     P extends Path,
-    Handler extends KnownResult extends true
+    Handler extends (KnownResult extends true
       ? RouteHandler<P, Result>
-      : RouteHandler<P, any>,
+      : RouteHandler<P, any>),
   >(
     path: P,
     handler: Handler,
@@ -190,7 +190,9 @@ export type Router<
    * none of its registered paths match the input being dispatched.
    */
   default<
-    DefaultHandler extends KnownResult extends true ? () => Result : () => any,
+    DefaultHandler extends (KnownResult extends true
+      ? () => Result
+      : () => any),
   >(
     f: DefaultHandler,
   ): Router<

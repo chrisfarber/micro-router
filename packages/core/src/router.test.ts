@@ -99,7 +99,7 @@ describe("router", () => {
         .exhaustive();
 
       expect(r.dispatch("/knock/knock")).toEqual("who's there?");
-      expect(() => r.dispatch("uhhh")).toThrowError(
+      expect(() => r.dispatch("uhhh")).toThrow(
         `router had no handler matching`,
       );
     });

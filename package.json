@@ -5,6 +5,13 @@
     "name": "Chris Farber",
     "email": "chris@chrisfarber.net"
   },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "download",
+      "version": "12.11.2"
+    }
+  },
   "scripts": {
     "typecheck": "turbo typecheck",
     "test": "turbo test",
@@ -15,15 +22,14 @@
     "docs:build": "typedoc"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0",
-    "@types/node": "^24.12.0",
-    "oxfmt": "^0.54.0",
-    "oxlint": "^1.69.0",
-    "oxlint-tsgolint": "^0.23.0",
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "^26.6.5",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
+    "oxlint-tsgolint": "^7.0.2004",
     "playwright": "catalog:",
-    "turbo": "^2.8.14",
+    "turbo": "^2.11.9",
     "typedoc": "catalog:",
     "typescript": "catalog:"
-  },
-  "packageManager": "pnpm@10.23.0+sha512.21c4e5698002ade97e4efe8b8b4a89a8de3c85a37919f957e7a0f30f38fbc5bbdd05980ffe29179b2fb6e6e691242e098d945d1601772cad0fef5fb6411e2a4b"
+  }
 }

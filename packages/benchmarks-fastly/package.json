@@ -1,0 +1,21 @@
+{
+  "name": "@micro-router/benchmarks-fastly",
+  "private": true,
+  "description": "Router benchmarks run under Fastly Compute's JavaScript runtime",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "build:wasm": "js-compute-runtime src/index.ts bin/main.wasm",
+    "build:wasm:aot": "js-compute-runtime --enable-aot src/index.ts bin/main-aot.wasm",
+    "bench:fastly": "node scripts/bench.ts"
+  },
+  "dependencies": {
+    "@micro-router/benchmarks": "workspace:^",
+    "@micro-router/core": "workspace:^",
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@fastly/js-compute": "^3",
+    "typescript": "catalog:"
+  }
+}

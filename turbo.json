@@ -15,6 +15,18 @@
     },
     "test": {
       "dependsOn": ["^build"]
+    },
+    "bench": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "bench:cold": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "bench:fastly": {
+      "dependsOn": ["^build"],
+      "cache": false
     }
   }
 }

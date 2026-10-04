@@ -1,0 +1,8 @@
+# Only used to run the benchmarks locally, with `fastly compute serve`.
+manifest_version = 3
+name = "micro-router-benchmarks"
+description = "Router benchmarks run under Fastly Compute's JavaScript runtime"
+language = "javascript"
+
+[scripts]
+build = "pnpm run build:wasm"

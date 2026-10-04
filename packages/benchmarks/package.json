@@ -1,0 +1,22 @@
+{
+  "name": "@micro-router/benchmarks",
+  "private": true,
+  "description": "Benchmarks for micro-router, compared against other routers",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "bench": "node --expose-gc src/paths.bench.ts && node --expose-gc src/router.bench.ts && node --expose-gc src/hono-suite.bench.ts",
+    "bench:paths": "node --expose-gc src/paths.bench.ts",
+    "bench:router": "node --expose-gc src/router.bench.ts",
+    "bench:hono": "node --expose-gc src/hono-suite.bench.ts",
+    "bench:cold": "node src/cold-start.ts"
+  },
+  "dependencies": {
+    "@micro-router/core": "workspace:^",
+    "hono": "^4.13.13",
+    "mitata": "^1.0.34"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}

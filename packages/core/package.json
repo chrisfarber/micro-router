@@ -1,17 +1,17 @@
 {
   "name": "@micro-router/core",
-  "description": "a library for defining paths and parsing data from them",
   "version": "0.1.0",
+  "description": "a library for defining paths and parsing data from them",
   "author": {
     "name": "Chris Farber",
     "email": "chris@chrisfarber.net"
   },
-  "sideEffects": false,
-  "main": "./dist/index.js",
-  "type": "module",
   "files": [
     "dist"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

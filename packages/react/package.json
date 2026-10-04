@@ -1,7 +1,10 @@
 {
   "name": "@micro-router/react",
-  "description": "a small, strongly-typed router for React",
   "version": "0.1.0",
+  "description": "a small, strongly-typed router for React",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -9,19 +12,10 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "typecheck": "tsc -b",
     "test": "vitest run",
     "build": "tsdown"
-  },
-  "peerDependencies": {
-    "@micro-router/core": "workspace:^",
-    "@micro-router/history": "workspace:^",
-    "react": "^19",
-    "react-dom": "^19"
   },
   "devDependencies": {
     "@micro-router/core": "workspace:^",
@@ -35,5 +29,11 @@
     "typescript": "catalog:",
     "vitest": "catalog:",
     "vitest-browser-react": "catalog:"
+  },
+  "peerDependencies": {
+    "@micro-router/core": "workspace:^",
+    "@micro-router/history": "workspace:^",
+    "react": "^19",
+    "react-dom": "^19"
   }
 }

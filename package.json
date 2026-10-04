@@ -1,20 +1,15 @@
 {
-  "type": "module",
   "license": "MIT",
   "author": {
     "name": "Chris Farber",
     "email": "chris@chrisfarber.net"
   },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "onFail": "download",
-      "version": "12.11.2"
-    }
-  },
+  "type": "module",
   "scripts": {
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "bench": "turbo bench",
+    "bench:cold": "turbo bench:cold",
     "lint": "turbo build && oxlint",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
@@ -30,5 +25,12 @@
     "playwright": "catalog:",
     "turbo": "^2.11.9",
     "typescript": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.11.2",
+      "onFail": "download"
+    }
   }
 }

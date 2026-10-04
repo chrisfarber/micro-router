@@ -1,15 +1,15 @@
 {
   "name": "@micro-router/history",
-  "description": "an abstraction over the browser's history APIs",
   "version": "0.1.0",
+  "description": "an abstraction over the browser's history APIs",
   "author": {
     "name": "Chris Farber",
     "email": "chris@chrisfarber.net"
   },
-  "type": "module",
   "files": [
     "dist"
   ],
+  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -21,13 +21,13 @@
     "test": "vitest run",
     "build": "tsdown"
   },
-  "peerDependencies": {
-    "@micro-router/core": "workspace:^"
-  },
   "devDependencies": {
     "@micro-router/core": "workspace:^",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "tsdown": "catalog:"
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@micro-router/core": "workspace:^"
   }
 }

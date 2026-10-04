@@ -3,6 +3,8 @@ packages:
 
 allowBuilds:
   "@swc/core": true
+  # esbuild (via @fastly/js-compute) works from its platform package alone
+  esbuild: false
 
 catalog:
   "@vitest/browser-playwright": ^5.0.5

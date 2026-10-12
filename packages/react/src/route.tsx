@@ -1,7 +1,6 @@
 import {
   type DataOfPath,
   isExactMatch,
-  type MatchComparator,
   type Path,
   router,
 } from "@micro-router/core";
@@ -30,14 +29,14 @@ const buildRoute = <P extends Path>({
   exact,
 }: BuildRouteOpts<P>): RouteComponent<P> => {
   const Matched: FC<DataOfPath<P>> = render;
-  Matched.displayName = `Matched: ${path.path}`;
+  Matched.displayName = `Matched: ${path.repr}`;
 
   const Outer: FC = () => {
     const [match, params] = usePathMatch(path, { exact });
     if (!match) return null;
     return <Matched {...params} />;
   };
-  Outer.displayName = `${exact ? "Route" : "Match"}: ${path.path}`;
+  Outer.displayName = `${exact ? "Route" : "Match"}: ${path.repr}`;
 
   const Matcher = Outer as RouteComponent<P>;
   Matcher.path = path;
@@ -77,7 +76,6 @@ export const match = <P extends Path>(
 /** @inline */
 export type RouteSwitchOpts = {
   routes: RouteComponent[];
-  comparator?: MatchComparator;
   fallback?: ReactNode;
 };
 /**
@@ -112,14 +110,9 @@ export type RouteSwitchOpts = {
  * ```
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const routeSwitch = ({
-  routes,
-  comparator,
-  fallback,
-}: RouteSwitchOpts): FC => {
+export const routeSwitch = ({ routes, fallback }: RouteSwitchOpts): FC => {
   const matcher = router<ReactNode>({
     partialMatch: true,
-    comparator,
   }).default(() => fallback);
   for (const RouteComponent of routes) {
     matcher.on(RouteComponent.path, match => {

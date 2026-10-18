@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { codec } from "./codec";
-import type { MatchSuccess, Path } from "./definitions";
+import type { Path, ValidData } from "./definitions";
 import { path } from "./path";
 import { number } from "./number";
 import { regexp } from "./regexp";
-import { router } from "./router";
+import { router, type RouteMatch } from "./router";
 import { dataSegment } from "./segment";
 import { string } from "./string";
 import { textEnum, textSegments } from "./text";
+
+type Match = RouteMatch<Path<string, ValidData>>;
 
 describe("router", () => {
   describe(".dispatch()", () => {
@@ -17,16 +19,16 @@ describe("router", () => {
       const UserSettingsPath = path(UserByIdPath, "settings");
 
       const fires: number[] = [];
-      const r = router({ partialMatch: true })
-        .on(UsersPath, () => {
+      const r = router()
+        .onPrefix(UsersPath, () => {
           fires.push(0);
           return 0;
         })
-        .on(UserByIdPath, () => {
+        .onPrefix(UserByIdPath, () => {
           fires.push(1);
           return 1;
         })
-        .on(UserSettingsPath, () => {
+        .onPrefix(UserSettingsPath, () => {
           fires.push(2);
           return 2;
         });
@@ -97,15 +99,16 @@ describe("router", () => {
       expect(calls).toBe(0);
     });
 
-    it("is called for partial matches when matching exactly", () => {
-      const r = router()
+    it("is called when input continues past a route", () => {
+      const exact = router()
         .on(path("users"), () => "users")
         .default(() => "default");
+      expect(exact.dispatch("/users/extra")).toEqual("default");
 
-      expect(r.dispatch("/users/extra")).toEqual("default");
-      expect(r.dispatch("/users/extra", { partialMatch: true })).toEqual(
-        "users",
-      );
+      const prefixed = router()
+        .onPrefix(path("users"), () => "users")
+        .default(() => "default");
+      expect(prefixed.dispatch("/users/extra")).toEqual("users");
     });
 
     it("yields a default and narrows the type", () => {
@@ -167,7 +170,7 @@ describe("router", () => {
     });
   });
 
-  describe("exact vs partial matching", () => {
+  describe("exact vs prefix matching", () => {
     it("only matches exact paths by default", () => {
       const r = router()
         .on(path("/users"), () => "users")
@@ -190,65 +193,85 @@ describe("router", () => {
       expect(r.dispatch("/users/42/")).toEqual("userById");
     });
 
-    it("preserves trailing slash in remaining for partial matches", () => {
-      const r = router({ partialMatch: true })
-        .on(path("/users"), result => ({
-          name: "users",
-          remaining: result.remaining,
-        }))
-        .on(path("/users", string("id")), result => ({
-          name: "user",
-          id: result.data.id,
-          remaining: result.remaining,
-        }));
+    it("gives prefix routes the rest of the input", () => {
+      const r = router()
+        .onPrefix(path("/users"), ({ rest }) => ["users", rest])
+        .onPrefix(path("/users", string("id")), ({ data, rest }) => [
+          data.id,
+          rest,
+        ]);
 
-      // Trailing slash is preserved in remaining for inspection
-      const result1 = r.dispatch("/users/");
-      expect(result1).toEqual({ name: "users", remaining: "/" });
-
-      const result2 = r.dispatch("/users/42/");
-      expect(result2).toEqual({ name: "user", id: "42", remaining: "/" });
+      expect(r.dispatch("/users")).toEqual(["users", []]);
+      expect(r.dispatch("/users/")).toEqual(["users", []]);
+      expect(r.dispatch("/users/42/")).toEqual(["42", []]);
+      expect(r.dispatch("/users/42/settings/a")).toEqual([
+        "42",
+        ["settings", "a"],
+      ]);
+      // empty segments are skipped
+      expect(r.dispatch("/users/42//settings//")).toEqual(["42", ["settings"]]);
     });
 
-    it("allows partial matches when configured at router level", () => {
-      const r = router({ partialMatch: true })
-        .on(path("/users"), () => "users")
-        .on(path("/users", string("id")), () => "usersById");
+    it("prefers an exact route over a prefix route for the same path", () => {
+      const r = router()
+        .onPrefix(path("/users"), () => "prefix")
+        .on(path("/users"), () => "exact");
 
-      expect(r.dispatch("/users")).toEqual("users");
-      expect(r.dispatch("/users/42")).toEqual("usersById");
-
-      // Now partial match is allowed
-      expect(r.dispatch("/users/42/settings")).toEqual("usersById");
+      expect(r.dispatch("/users")).toEqual("exact");
+      expect(r.dispatch("/users/")).toEqual("exact");
+      expect(r.dispatch("/users//")).toEqual("exact");
+      expect(r.dispatch("/users/42")).toEqual("prefix");
     });
 
-    it("allows dispatch-time override from partial to exact", () => {
-      const r = router({ partialMatch: true })
-        .on(path("/users"), () => "users")
-        .on(path("/users", string("id")), () => "user");
+    it("doesn't let an exact route match longer input", () => {
+      const r = router()
+        .on(path("/users", string("id")), () => "user")
+        .onPrefix(path("/"), () => "fallback");
 
-      expect(r.dispatch("/users/42/settings")).toEqual("user");
-      expect(r.dispatch("/users/42/settings", { partialMatch: false })).toEqual(
-        null,
-      );
+      expect(r.dispatch("/users/42")).toEqual("user");
+      expect(r.dispatch("/users/42/settings")).toEqual("fallback");
+    });
+
+    it("doesn't give exact routes a rest", () => {
+      const r = router()
+        .on(path("/users"), m => m)
+        .on(path(textSegments("Case", { caseSensitive: true })), m => m);
+
+      expect(r.dispatch("/users")).not.toHaveProperty("rest");
+      expect(r.dispatch("/Case")).not.toHaveProperty("rest");
+    });
+
+    it("types the rest only for prefix handlers", () => {
+      router()
+        .on(path("a"), m => {
+          // @ts-expect-error exact routes have no rest
+          const rest: unknown = m.rest;
+          return rest;
+        })
+        .onPrefix(path("b", string("id")), m => {
+          const rest: string[] = m.rest;
+          const id: string = m.data.id;
+          return [rest, id];
+        });
     });
   });
 
   describe("match results passed to handlers", () => {
-    const pick = ({ data, captures, remaining }: MatchSuccess) => ({
+    const pick = ({ data, captures }: Match) => ({ data, captures });
+    const pickRest = ({
       data,
       captures,
-      remaining,
+      rest,
+    }: Match & { rest: string[] }) => ({
+      data,
+      captures,
+      rest,
     });
 
-    it("reports no remaining input for an exact static match", () => {
+    it("reports no data for an exact static match", () => {
       const r = router().on(path("users"), pick);
 
-      expect(r.dispatch("/users")).toEqual({
-        data: null,
-        captures: 0,
-        remaining: "",
-      });
+      expect(r.dispatch("/users")).toEqual({ data: null, captures: 0 });
     });
 
     it("collects data and captures from every level of the path", () => {
@@ -259,31 +282,30 @@ describe("router", () => {
       const expected = {
         data: { userId: "u1", postId: "p9" },
         captures: 2,
-        remaining: "",
       };
       expect(r.dispatch("/users/u1/posts/p9")).toEqual(expected);
       expect(r.dispatch("/USERS/u1/Posts/p9")).toEqual(expected);
     });
 
-    it("reports remaining input and data for partial matches", () => {
-      const r = router({ partialMatch: true })
-        .on(path("users", string("userId")), pick)
-        .on(path("users", string("userId"), "posts"), pick);
+    it("reports the rest and data for prefix matches", () => {
+      const r = router()
+        .onPrefix(path("users", string("userId")), pickRest)
+        .onPrefix(path("users", string("userId"), "posts"), pickRest);
 
       expect(r.dispatch("/users/u1/posts")).toEqual({
         data: { userId: "u1" },
         captures: 1,
-        remaining: "",
+        rest: [],
       });
       expect(r.dispatch("/users/u1/extra/bits")).toEqual({
         data: { userId: "u1" },
         captures: 1,
-        remaining: "/extra/bits",
+        rest: ["extra", "bits"],
       });
       expect(r.dispatch("/users/u1/posts/x/")).toEqual({
         data: { userId: "u1" },
         captures: 1,
-        remaining: "/x/",
+        rest: ["x"],
       });
     });
 
@@ -296,9 +318,9 @@ describe("router", () => {
       expect(r.dispatch("/u/1/b")).toEqual(["nameB", { name: "1" }]);
     });
 
-    it("does not merge data from a shorter partial match into the winner", () => {
-      const r = router({ partialMatch: true })
-        .on(path("u", string("id")), m => ["id", m.data])
+    it("does not merge data from a shorter prefix match into the winner", () => {
+      const r = router()
+        .onPrefix(path("u", string("id")), m => ["id", m.data])
         .on(path("u", string("name"), "posts"), m => ["namePosts", m.data]);
 
       expect(r.dispatch("/u/1/posts")).toEqual(["namePosts", { name: "1" }]);
@@ -306,29 +328,23 @@ describe("router", () => {
   });
 
   describe("ranking", () => {
-    const both = <T>(
-      a: [Path, T],
-      b: [Path, T],
-      input: string,
-      opts?: { partialMatch: boolean },
-    ) => [
-      router(opts)
-        .on(a[0], () => a[1])
-        .on(b[0], () => b[1])
-        .dispatch(input),
-      router(opts)
-        .on(b[0], () => b[1])
-        .on(a[0], () => a[1])
-        .dispatch(input),
+    type Route<T> = [Path, T] | [Path, T, "prefix"];
+    const register = <T>(r: ReturnType<typeof router>, route: Route<T>) =>
+      route[2]
+        ? r.onPrefix(route[0], () => route[1])
+        : r.on(route[0], () => route[1]);
+    /** dispatch `input` with `a` and `b` registered in both orders */
+    const both = <T>(a: Route<T>, b: Route<T>, input: string) => [
+      register(register(router(), a), b).dispatch(input),
+      register(register(router(), b), a).dispatch(input),
     ];
 
     it("prefers the match that consumes the most input", () => {
       expect(
         both(
           [path("a", string("x"), string("y")), "long"],
-          [path("a", "b"), "short"],
+          [path("a", "b"), "short", "prefix"],
           "/a/b/c",
-          { partialMatch: true },
         ),
       ).toEqual(["long", "long"]);
     });
@@ -408,6 +424,61 @@ describe("router", () => {
       ).toEqual(["enum", "string"]);
     });
 
+    it("prefers an exact match over a prefix route that consumes the same input", () => {
+      expect(
+        both(
+          [path("files"), "exact"],
+          [path("files"), "prefix", "prefix"],
+          "/files/",
+        ),
+      ).toEqual(["exact", "exact"]);
+      // even when the exact match has more captures
+      expect(
+        both(
+          [path("files", string("name")), "exact"],
+          [path("files", "readme"), "prefix", "prefix"],
+          "/files/readme",
+        ),
+      ).toEqual(["exact", "exact"]);
+    });
+
+    it("prefers a deeper route over a prefix route", () => {
+      expect(
+        both(
+          [path("files", "readme"), "exact"],
+          [path("files"), "prefix", "prefix"],
+          "/files/readme",
+        ),
+      ).toEqual(["exact", "exact"]);
+      expect(
+        both(
+          [path("files", "docs"), "deep", "prefix"],
+          [path("files"), "shallow", "prefix"],
+          "/files/docs/a",
+        ),
+      ).toEqual(["deep", "deep"]);
+    });
+
+    it("prefers fewer captures between prefix routes that consume the same input", () => {
+      expect(
+        both(
+          [path("files", "docs"), "static", "prefix"],
+          [path("files", string("dir")), "dynamic", "prefix"],
+          "/files/docs/a",
+        ),
+      ).toEqual(["static", "static"]);
+    });
+
+    it("falls back to a prefix route when a deeper route fails", () => {
+      expect(
+        both(
+          [path("files", "docs", "readme"), "exact"],
+          [path("files"), "prefix", "prefix"],
+          "/files/docs/other",
+        ),
+      ).toEqual(["prefix", "prefix"]);
+    });
+
     it("falls back to a dynamic route when the static one fails deeper", () => {
       expect(
         both(
@@ -420,10 +491,15 @@ describe("router", () => {
   });
 
   describe("static routes", () => {
-    const pick = ({ data, captures, remaining }: MatchSuccess) => ({
+    const pick = ({ data, captures }: Match) => ({ data, captures });
+    const pickRest = ({
       data,
       captures,
-      remaining,
+      rest,
+    }: Match & { rest: string[] }) => ({
+      data,
+      captures,
+      rest,
     });
 
     // Registering any case-sensitive text disables the static fast path, so a
@@ -432,7 +508,7 @@ describe("router", () => {
       textSegments("never-matched", { caseSensitive: true }),
     );
 
-    const wildcard = dataSegment({
+    const star = dataSegment({
       repr: "*",
       captures: 0,
       codec: codec(
@@ -441,14 +517,19 @@ describe("router", () => {
       ),
     });
 
-    const routes = (trieOnly: boolean, partialMatch: boolean) => {
-      const r = router({ partialMatch })
+    const routes = (trieOnly: boolean, prefixes: boolean) => {
+      let r = router()
         .on(path(), m => ["root", pick(m)])
         .on(path("users"), m => ["users", pick(m)])
         .on(path("users/all"), m => ["all", pick(m)])
         .on(path("users", string("id")), m => ["id", pick(m)])
-        .on(path("static", wildcard), m => ["wildcard", pick(m)])
+        .on(path("static", star), m => ["star", pick(m)])
         .on(path("static/index.html"), m => ["index", pick(m)]);
+      if (prefixes) {
+        r = r
+          .onPrefix(path(), m => ["root*", pickRest(m)])
+          .onPrefix(path("users"), m => ["users*", pickRest(m)]);
+      }
       return trieOnly ? r.on(NeverPath, () => ["never", null]) : r;
     };
 
@@ -471,10 +552,10 @@ describe("router", () => {
       "/users/all/extra",
     ];
 
-    for (const partialMatch of [false, true]) {
-      it(`dispatches like the trie (partialMatch: ${String(partialMatch)})`, () => {
-        const fast = routes(false, partialMatch);
-        const trie = routes(true, partialMatch);
+    for (const prefixes of [false, true]) {
+      it(`dispatches like the trie (prefixes: ${String(prefixes)})`, () => {
+        const fast = routes(false, prefixes);
+        const trie = routes(true, prefixes);
         for (const input of inputs) {
           expect([input, fast.dispatch(input)]).toEqual([
             input,

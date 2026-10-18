@@ -39,7 +39,7 @@ export interface Path<
    * Dynamic paths have 1+ captures (e.g., `path("/users", string("id"))` has 1)
    *
    * This is useful for route specificity comparison:
-   * When multiple routes match the same input with equal remaining text,
+   * When multiple routes match the same input and consume the same text,
    * the route with fewer captures should be preferred as it is more specific.
    *
    * @example
@@ -112,7 +112,11 @@ export type MatchFailure = { ok: false };
 export type MatchSuccess<D extends ValidData = ValidData> = {
   ok: true;
   data: D;
-  remaining: string;
+  /**
+   * The decoded segments of the input that follow the matched path. Empty
+   * segments are skipped, so a match is exact when `rest` is empty.
+   */
+  rest: string[];
   captures: number;
 };
 export type MatchSuccessForPath<P extends Path> = MatchSuccess<DataOfPath<P>>;

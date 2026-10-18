@@ -132,10 +132,12 @@ const AccountFrontend = path("account");
 const BillingFrontend = path("account/billing");
 
 type Application = "config" | "new-config" | "account" | "billing";
-const knownApplications = router<Application>({ partialMatch: true })
-  .on(ConfigFrontend, data => (data.ver === "v2" ? "new-config" : "config"))
-  .on(AccountFrontend, () => "account")
-  .on(BillingFrontend, () => "billing");
+const knownApplications = router<Application>()
+  .onPrefix(ConfigFrontend, ({ data }) =>
+    data.ver === "v2" ? "new-config" : "config",
+  )
+  .onPrefix(AccountFrontend, () => "account")
+  .onPrefix(BillingFrontend, () => "billing");
 
 knownApplications.dispatch("/account/billing");
 // => "billing"

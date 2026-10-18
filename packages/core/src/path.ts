@@ -1,11 +1,15 @@
 import type {
   MatchResultForPath,
-  MatchSuccess,
   Path,
   Segment,
   ValidData,
 } from "./definitions";
-import { decodePath, decodeSegment, encodeSegment } from "./encoding";
+import {
+  decodePath,
+  decodeRest,
+  decodeSegment,
+  encodeSegment,
+} from "./encoding";
 import type { DecodeResult } from "./prism";
 import { textEqual, textSegments, type TextSegments } from "./text";
 import { make, type Prettify, type StripLeadingSlash } from "./util";
@@ -120,12 +124,6 @@ const matchPath = <P extends Path>(
   const len = pathString.length;
   let pos = 0;
   let data: ValidData = null;
-  if (path.segments.length === 0) {
-    if (pathString[pos] === "/") pos++;
-    if (pos < len && pathString[pos] !== "/") {
-      return { ok: false };
-    }
-  }
   for (const segment of path.segments) {
     while (pos < len && pathString[pos] === "/") pos++;
     if (pos >= len) {
@@ -168,18 +166,14 @@ const matchPath = <P extends Path>(
     }
   }
 
+  const rest = decodeRest(pathString.slice(pos).split("/"), 0, encoded);
+  if (rest === null) {
+    return { ok: false };
+  }
   return {
     ok: true,
     data,
-    remaining: pathString.slice(pos),
+    rest,
     captures: path.captures,
   };
-};
-/**
-
- * A match is considered `exact` when it consumes the entire input of a URL string,
- * or if there's a single `"/"` remaining at the end.
- */
-export const isExactMatch = (match: MatchSuccess): boolean => {
-  return match.remaining === "" || match.remaining === "/";
 };

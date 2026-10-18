@@ -18,6 +18,15 @@ Additionally, URL encoding is now handled properly.
 There are some breaking changes:
 
 - `Path.path` is now `Path.repr`
-- Several segment constructors have had breaking changes to their APIs;
-  path(), string(), and number() should behave as they did before, but,
-  most other segment constructors have had breaking changes.
+- Several segment constructors have had breaking changes to their APIs; path(),
+  string(), and number() should behave as they did before, but, most other
+  segment constructors have had breaking changes.
+- The router no longer accepts `partialMatch`, either when it's constructed or
+  when dispatching. Instead, register a route with `.onPrefix()` to have it
+  match any input that starts with its path; its handler receives the rest of
+  the input, decoded, as `rest: string[]`. Routes registered with `.on()` only
+  match the entire input, and are preferred over a prefix route that matches the
+  same input.
+- Match results report `rest: string[]` instead of `remaining: string`, and
+  `isExactMatch()` has been removed: a match is exact when `rest` is empty.
+- The root path, `path()`, is now a prefix of every path, like any other path.

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { string } from "./string";
-import { isExactMatch, path } from "./path";
+import { path } from "./path";
 import { number } from "./number";
 import { regexp } from "./regexp";
 import { textEnum, textSegments } from "./text";
-import type { DataOfPath, MatchSuccess, Path } from "./definitions";
+import type { DataOfPath, Path } from "./definitions";
 
 describe("path", () => {
   it("builds a valid path", () => {
@@ -61,19 +61,19 @@ describe("Path.match()", () => {
     expect(p.match("/alpha/bravo")).toEqual({
       ok: true,
       data: null,
-      remaining: "",
+      rest: [],
       captures: 0,
     });
     expect(p.match("/alpha/bravo/")).toEqual({
       ok: true,
       data: null,
-      remaining: "/",
+      rest: [],
       captures: 0,
     });
-    expect(p.match("/alpha/bravo/charlie")).toEqual({
+    expect(p.match("/alpha/bravo/charlie//delta/")).toEqual({
       ok: true,
       data: null,
-      remaining: "/charlie",
+      rest: ["charlie", "delta"],
       captures: 0,
     });
     expect(p.match("/not/good")).toEqual({ ok: false });
@@ -81,10 +81,11 @@ describe("Path.match()", () => {
 
   it("matches the root path", () => {
     const root = { ok: true, data: null, captures: 0 };
-    expect(path().match("/")).toEqual({ ...root, remaining: "" });
-    expect(path().match("")).toEqual({ ...root, remaining: "" });
-    expect(path().match("//")).toEqual({ ...root, remaining: "/" });
-    expect(path().match("/foo")).toEqual({ ok: false });
+    expect(path().match("/")).toEqual({ ...root, rest: [] });
+    expect(path().match("")).toEqual({ ...root, rest: [] });
+    expect(path().match("//")).toEqual({ ...root, rest: [] });
+    // like any other path, the root path is a prefix of longer input
+    expect(path().match("/foo")).toEqual({ ...root, rest: ["foo"] });
   });
 
   it("extracts data", () => {
@@ -92,7 +93,7 @@ describe("Path.match()", () => {
     expect(p.match("/there/and/back")).toEqual({
       ok: true,
       data: { left: "there", right: "back" },
-      remaining: "",
+      rest: [],
       captures: 2,
     });
   });
@@ -103,7 +104,7 @@ describe("make/match round trips", () => {
     const made = p.make(data);
     expect([made, p.match(made)]).toEqual([
       made,
-      { ok: true, data, remaining: "", captures: p.captures },
+      { ok: true, data, rest: [], captures: p.captures },
     ]);
     return made;
   };
@@ -157,39 +158,5 @@ describe("make/match round trips", () => {
   it("round trips paths built from arrays of segments", () => {
     const p = path("x", [string("a"), number("b")]);
     expect(roundTrip(p, { a: "q", b: 3 })).toEqual("/x/q/3");
-  });
-});
-
-describe("isExactMatch", () => {
-  const success = (remaining: string): MatchSuccess => ({
-    ok: true,
-    data: null,
-    captures: 0,
-    remaining,
-  });
-
-  it("is exact when nothing remains", () => {
-    expect(isExactMatch(success(""))).toBe(true);
-  });
-
-  it("is exact when a single slash remains", () => {
-    expect(isExactMatch(success("/"))).toBe(true);
-  });
-
-  it("is not exact when more input remains", () => {
-    expect(isExactMatch(success("//"))).toBe(false);
-    expect(isExactMatch(success("/a"))).toBe(false);
-    expect(isExactMatch(success("a"))).toBe(false);
-  });
-
-  it("agrees with Path.match() results", () => {
-    const p = path("a");
-    const check = (input: string) => {
-      const m = p.match(input);
-      return m.ok && isExactMatch(m);
-    };
-    expect(check("/a")).toBe(true);
-    expect(check("/a/")).toBe(true);
-    expect(check("/a/b")).toBe(false);
   });
 });

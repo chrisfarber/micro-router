@@ -67,7 +67,7 @@ describe("percent-encoding in paths", () => {
       const made = File.make({ name });
       expect([name, File.match(made)]).toEqual([
         name,
-        { ok: true, data: { name }, remaining: "", captures: 1 },
+        { ok: true, data: { name }, rest: [], captures: 1 },
       ]);
     }
   });
@@ -118,15 +118,25 @@ describe("percent-encoding in paths", () => {
     expect(Cafe.make(null)).toEqual("/caf%C3%A9/a%26b");
   });
 
-  it("reports remaining input that can be dispatched again", () => {
-    const outer = router({ partialMatch: true }).on(
-      path("files"),
-      m => m.remaining,
-    );
-    const inner = router().on(path(string("name")), m => m.data.name);
+  it("decodes each segment of the rest", () => {
+    const input = "/files/100%25%20off/a%2Fb/caf%C3%A9";
+    const rest = ["100% off", "a/b", "café"];
+    expect(path("files").match(input)).toMatchObject({ ok: true, rest });
+    expect(
+      router()
+        .onPrefix(path("files"), m => m.rest)
+        .dispatch(input),
+    ).toEqual(rest);
+  });
 
-    const remaining = outer.dispatch("/files/100%25%20off") as string;
-    expect(inner.dispatch(remaining)).toEqual("100% off");
+  it("fails to match a rest with invalid escapes", () => {
+    expect(path("files").match("/files/ok/%E0%A4%A")).toEqual({ ok: false });
+    expect(
+      router()
+        .onPrefix(path(), () => "root")
+        .onPrefix(path("files"), () => "files")
+        .dispatch("/files/ok/%E0%A4%A"),
+    ).toBe(null);
   });
 
   it("passes the original input to the default handler", () => {

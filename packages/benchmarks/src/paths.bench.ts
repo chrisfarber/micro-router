@@ -83,7 +83,7 @@ for (const name of routeNames) {
   assert.equal(p.repr, pattern, name);
   assert.deepEqual(p.match(url), {
     ok: true,
-    remaining: "",
+    rest: [],
     data,
     captures: p.captures,
   });

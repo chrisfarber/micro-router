@@ -2,7 +2,6 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { Navigator } from "./navigator";
 import { useNavigator } from "./provider";
 import type { Path, DataOfPath } from "@micro-router/core";
-import { isExactMatch } from "@micro-router/core";
 
 export const useLocation = () => {
   const navigator: Navigator = useNavigator() as Navigator;
@@ -22,7 +21,7 @@ export const usePathMatch = <P extends Path>(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const [matches, data] = useMemo(() => {
     const match = path.match(loc.pathname);
-    if (!match.ok || (exact && !isExactMatch(match))) {
+    if (!match.ok || (exact && match.rest.length > 0)) {
       return [false, null];
     }
     return [true, match.data];

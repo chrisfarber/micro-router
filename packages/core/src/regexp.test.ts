@@ -10,7 +10,7 @@ describe("regexp", () => {
     expect(p.match("/files/notes.txt")).toMatchObject({
       ok: true,
       data: { name: "notes.txt" },
-      remaining: "",
+      rest: [],
     });
     expect(p.make({ name: "todo.txt" })).toEqual("/files/todo.txt");
   });

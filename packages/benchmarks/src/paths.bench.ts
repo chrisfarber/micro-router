@@ -80,7 +80,7 @@ const entries: { path: Path; url: string; data: unknown }[] = routeNames.map(
 for (const name of routeNames) {
   const { pattern, url, data } = cases[name];
   const p = routes[name];
-  assert.equal(p.path, pattern, name);
+  assert.equal(p.repr, pattern, name);
   assert.deepEqual(p.match(url), {
     ok: true,
     remaining: "",

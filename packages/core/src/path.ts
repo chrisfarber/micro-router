@@ -1,5 +1,4 @@
 import type {
-  DataOfPath,
   MatchResultForPath,
   MatchSuccess,
   Path,

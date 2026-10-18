@@ -9,7 +9,7 @@
   "env": {
     "builtin": true
   },
-  "ignorePatterns": ["**/node_modules", "**/dist", ".dagger"],
+  "ignorePatterns": ["**/node_modules", "**/dist"],
   "rules": {
     "constructor-super": "error",
     "for-direction": "error",

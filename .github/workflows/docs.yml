@@ -19,10 +19,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docs
-        uses: dagger/dagger-for-github@v8.2.0
+      - uses: pnpm/setup@v3
         with:
-          call: build-docs --output ./docs
+          cache: true
+          require-lockfile: true
+
+      - run: pnpm turbo build
+
+      - name: Build Docs
+        run: pnpm docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

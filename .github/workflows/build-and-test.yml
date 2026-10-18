@@ -8,11 +8,21 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      CI: "true"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build and Test
-        uses: dagger/dagger-for-github@v8.2.0
+      - uses: pnpm/setup@v3
         with:
-          call: build-and-test
-          cloud-token: ${{ secrets.DAGGER_CLOUD_TOKEN }}
+          cache: true
+          require-lockfile: true
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
+      - run: pnpm turbo build
+      - run: pnpm turbo typecheck
+      - run: pnpm exec oxlint
+      - run: pnpm exec oxfmt --check
+      - run: pnpm turbo test

@@ -19,7 +19,7 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "build": "turbo build",
-    "docs:build": "typedoc"
+    "docs:build": "pnpm dlx --package typedoc@0.28.20 --package typescript@6.0.3 typedoc"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
@@ -29,7 +29,6 @@
     "oxlint-tsgolint": "^7.0.2004",
     "playwright": "catalog:",
     "turbo": "^2.11.9",
-    "typedoc": "catalog:",
     "typescript": "catalog:"
   }
 }

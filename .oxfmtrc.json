@@ -13,7 +13,6 @@
     "dist",
     "coverage",
     "node_modules",
-    ".dagger",
     "pnpm-lock.yaml",
     "*.tsbuildinfo",
     ".vscode/*",

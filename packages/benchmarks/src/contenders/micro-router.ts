@@ -1,25 +1,19 @@
-import {
-  mapData,
-  matchString,
-  path,
-  router,
-  segment,
-  string,
-} from "@micro-router/core";
+import { codec, dataSegment, path, router, string } from "@micro-router/core";
 import type { Path, Router } from "@micro-router/core";
 import type { Contender, Match } from "./contender.ts";
 
 /**
- * Matches any one url segment, and discards it. micro-router has no
- * multi-segment wildcard; this is as close as it gets to `*`, and is enough
- * for the suites' requests.
- *
- * It still counts as a capture, which only matters for ranking against
- * routes that match the same url; none do in the suites.
+ * Matches any one url segment without capturing it. micro-router matches one
+ * url segment per path segment, so it has no multi-segment wildcard; this is
+ * as close as it gets to `*`, and is enough for the suites' requests.
  */
-const wildcard = mapData(segment(matchString), {
-  to: () => null,
-  from: () => "",
+const wildcard = dataSegment({
+  repr: "*",
+  captures: 0,
+  codec: codec(
+    () => ({ ok: true, data: null }),
+    () => "",
+  ),
 });
 
 const toSegment = (part: string) =>
@@ -35,20 +29,18 @@ const pathBuilder = (): ((pattern: string) => Path) => {
   const root: Path = path();
   const prefixes = new Map<string, Path>();
   return pattern => {
-    let current: Path | null = null;
+    let current = root;
     let prefix = "";
     for (const part of pattern.split("/").filter(part => part)) {
       prefix += `/${part}`;
       let next = prefixes.get(prefix);
       if (!next) {
-        // Top-level paths don't extend `root`: `path(path(), "login")` matches
-        // only "/", not "/login".
-        next = current ? path(current, toSegment(part)) : path(toSegment(part));
+        next = path(current, toSegment(part));
         prefixes.set(prefix, next);
       }
       current = next;
     }
-    return current ?? root;
+    return current;
   };
 };
 

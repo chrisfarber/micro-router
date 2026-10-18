@@ -1,18 +1,35 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { Codec } from "./codec";
-import type {
-  MatchSuccess,
-  MatchSuccessForPath,
-  Path,
-  ValidData,
-} from "./definitions";
-import { decodePath, decodeSegment } from "./encoding";
+import type { DataOfPath, Path, ValidData } from "./definitions";
+import { decodePath, decodeRest, decodeSegment } from "./encoding";
 import type { DecodeResult } from "./prism";
 
+/** The match given to a handler registered with `.on()`. */
+export type RouteMatch<P extends Path = Path> = {
+  ok: true;
+  data: DataOfPath<P>;
+  captures: number;
+};
+
+/** The match given to a handler registered with `.onPrefix()`. */
+export type PrefixMatch<P extends Path = Path> = RouteMatch<P> & {
+  /**
+   * The decoded segments of the input that follow the path. Empty segments
+   * are skipped.
+   */
+  rest: string[];
+};
+
 export type RouteHandler<P extends Path = Path, R = unknown> = (
-  result: MatchSuccessForPath<P>,
+  result: RouteMatch<P>,
 ) => R;
+
+export type PrefixRouteHandler<P extends Path = Path, R = unknown> = (
+  result: PrefixMatch<P>,
+) => R;
+
+type AnyHandler = (result: any) => unknown;
 
 type DefaultHandler<R> = (input: string) => R;
 
@@ -22,27 +39,6 @@ const exhaustiveDefault: DefaultHandler<any> = (input: string) => {
 
 const nullDefault: DefaultHandler<null> = () => null;
 
-export type RouterOpts = {
-  /**
-   * Whether to allow partial matches (where the path doesn't consume the
-   * entire input string).
-   *
-   * When `false`, only paths that fully consume the input will be considered.
-   * When `true`, paths that leave remaining characters can still match.
-   *
-   * @default false
-   */
-  partialMatch?: boolean;
-};
-
-export type DispatchOpts = {
-  /**
-   * Whether to allow partial matches for this specific dispatch call.
-   * Overrides the router-level `partialMatch` setting if provided.
-   */
-  partialMatch?: boolean;
-};
-
 type DataChild = { codec: Codec<any>; node: Node };
 
 type Node = {
@@ -51,8 +47,10 @@ type Node = {
   /** case insensitive texts */
   text: Map<string, Node>;
   data: DataChild[];
-  /** the handler that ends at this node */
-  handler: RouteHandler | null;
+  /** the handler for a route that ends at this node */
+  route: AnyHandler | null;
+  /** the handler for a prefix route that ends at this node */
+  prefix: AnyHandler | null;
   captures: number;
 };
 
@@ -60,7 +58,8 @@ const emptyNode = (): Node => ({
   sText: new Map(),
   text: new Map(),
   data: [],
-  handler: null,
+  route: null,
+  prefix: null,
   captures: 0,
 });
 
@@ -82,22 +81,22 @@ const getDataNode = (parent: Node, codec: Codec<any>): Node => {
 };
 
 class RouterBuilder {
-  constructor(opts?: RouterOpts) {
-    const { partialMatch = false } = opts ?? {};
-    this.#partialMatch = partialMatch;
-    this.#static = new Map();
-  }
-
-  #partialMatch: boolean;
   #defaultHandler: DefaultHandler<any> = nullDefault;
   #root: Node = emptyNode();
   /**
    * Handlers for routes made only of case-insensitive text, keyed by their
    * lowercased url. `null` when the fast path is disabled.
    */
-  #static: Map<string, RouteHandler> | null;
+  #static: Map<string, AnyHandler> | null = new Map();
 
-  on<P extends Path>(path: P, handler: RouteHandler<P, any>): this {
+  /**
+   * Find the node for `path`, creating it if needed. Also returns the key for
+   * the static fast path, or `null` if the path can't use it.
+   *
+   * This _does not_ register a handler; you must do so yourself by mutating
+   * the node.
+   */
+  #lookup(path: Path): [Node, string | null] {
     let node: Node = this.#root;
     let captures = 0;
     let staticKey: string | null = "";
@@ -106,8 +105,8 @@ class RouterBuilder {
         case "text": {
           if (segment.caseSensitive) {
             node = getNode(node.sText, segment.text);
-            // The trie prefers case-sensitive text over case-insensitive
-            // text, which the static map can't express.
+            // Once we are concerned with case sensitive routes, we have
+            // to disable the static hashmap lookup optimization:
             this.#static = null;
           } else {
             const text = segment.text.toLowerCase();
@@ -127,13 +126,25 @@ class RouterBuilder {
       captures += segment.captures;
       node.captures = captures;
     }
-    node.handler ||= handler as RouteHandler;
+    return [node, staticKey];
+  }
+
+  on(path: Path, handler: AnyHandler): this {
+    const [node, key] = this.#lookup(path);
+    node.route ||= handler;
+    let staticKey = key;
     if (this.#static && staticKey !== null) {
       staticKey ||= "/";
       if (!this.#static.has(staticKey)) {
-        this.#static.set(staticKey, handler as RouteHandler);
+        this.#static.set(staticKey, handler);
       }
     }
+    return this;
+  }
+
+  onPrefix(path: Path, handler: AnyHandler): this {
+    const [node] = this.#lookup(path);
+    node.prefix ||= handler;
     return this;
   }
 
@@ -147,7 +158,7 @@ class RouterBuilder {
     return this;
   }
 
-  dispatch(input: string, opts?: DispatchOpts): any {
+  dispatch(input: string): any {
     const encoded = input.includes("%");
     const path = encoded ? decodePath(input) : input;
     if (this.#static) {
@@ -155,9 +166,7 @@ class RouterBuilder {
       if (res !== notFound) return res;
     }
 
-    const partialMatch = opts?.partialMatch ?? this.#partialMatch;
-
-    const state = new Dispatcher(partialMatch, path, encoded);
+    const state = new Dispatcher(path, encoded);
     state.dispatch(this.#root, 0, 0, 0, 0);
     if (state.handler) {
       return state.handler(state.match());
@@ -169,7 +178,7 @@ class RouterBuilder {
 const notFound = /* @__PURE__ */ Symbol("notFound");
 
 const dispatchStatic = (
-  routes: Map<string, RouteHandler>,
+  routes: Map<string, AnyHandler>,
   input: string,
 ): unknown => {
   const len = input.length;
@@ -177,27 +186,26 @@ const dispatchStatic = (
   const key = trailingSlash ? input.slice(0, -1) : input;
   const handler = routes.get(key);
   if (!handler) return notFound;
-  return handler({
-    ok: true,
-    data: null,
-    captures: 0,
-    remaining: key === "/" ? input : trailingSlash ? "/" : "",
-  });
+  return handler({ ok: true, data: null, captures: 0 });
 };
 
+// When two routes consume the same input, an exact route beats a prefix route.
+const PREFIX = 0;
+const EXACT = 1;
+
 class Dispatcher {
-  partial: boolean;
   url: string;
   parts: string[];
+  encoded: boolean;
   consumed: number;
+  kind: number;
   captures: number;
-  handler: RouteHandler | null;
+  handler: AnyHandler | null;
+  rest: string[] | null;
   dataStack: ValidData[];
   matchData: ValidData[];
-  encoded: boolean;
 
-  constructor(partial: boolean, url: string, encoded: boolean) {
-    this.partial = partial;
+  constructor(url: string, encoded: boolean) {
     this.url = url;
     this.encoded = encoded;
     // slicing strings is surprisingly expensive in Fastly Compute;
@@ -205,8 +213,10 @@ class Dispatcher {
     // best balance of performance
     this.parts = url.split("/");
     this.consumed = 0;
+    this.kind = EXACT;
     this.captures = 0;
     this.handler = null;
+    this.rest = null;
     this.dataStack = [];
     this.matchData = [];
   }
@@ -227,10 +237,30 @@ class Dispatcher {
     }
 
     this.dataStack[depth] = null;
-    if (node.handler && (this.partial || input === undefined)) {
-      this.consider(node.handler, depth, node.captures, start);
+    if (input === undefined) {
+      if (node.route) {
+        this.consider(node.route, depth, node.captures, start, EXACT, null);
+      }
+    } else {
+      this.descend(node, input, index, offset, depth);
     }
-    if (input === undefined) return;
+    // Considered after the children, so that a better match that was already
+    // found saves decoding the rest.
+    if (node.prefix && this.isBetter(start, PREFIX, node.captures)) {
+      const rest = decodeRest(parts, index, this.encoded);
+      if (rest) {
+        this.consider(node.prefix, depth, node.captures, start, PREFIX, rest);
+      }
+    }
+  }
+
+  descend(
+    node: Node,
+    input: string,
+    index: number,
+    offset: number,
+    depth: number,
+  ) {
     const end = offset + input.length;
     const next = index + 1;
 
@@ -278,40 +308,47 @@ class Dispatcher {
     }
   }
 
+  /**
+   * Whether a match that consumed `len` characters would beat the best match
+   * so far: the match that consumed the most input wins, then an exact match
+   * beats a prefix route, then the match with fewer captures wins.
+   */
+  isBetter(len: number, kind: number, captures: number): boolean {
+    if (!this.handler || len > this.consumed) return true;
+    if (len < this.consumed) return false;
+    if (kind !== this.kind) return kind > this.kind;
+    return captures < this.captures;
+  }
+
   consider(
-    handler: RouteHandler,
+    handler: AnyHandler,
     depth: number,
     captures: number,
     len: number,
+    kind: number,
+    rest: string[] | null,
   ) {
-    if (
-      !this.handler ||
-      len > this.consumed ||
-      (len === this.consumed && captures < this.captures)
-    ) {
-      this.consumed = len;
-      this.captures = captures;
-      this.handler = handler;
-      this.matchData = this.dataStack.slice(0, depth);
-    }
+    if (!this.isBetter(len, kind, captures)) return;
+    this.consumed = len;
+    this.kind = kind;
+    this.captures = captures;
+    this.handler = handler;
+    this.rest = rest;
+    this.matchData = this.dataStack.slice(0, depth);
   }
 
   /** The result for the best match. Only valid once `handler` is set. */
-  match(): MatchSuccess {
+  match(): RouteMatch | PrefixMatch {
     const matchData = this.matchData;
-    const { captures, consumed } = this;
-    const remaining = this.url.length - consumed;
     let data: ValidData = null;
     for (let i = 0; i < matchData.length; i++) {
       const d = matchData[i];
       if (d) data = Object.assign(data ?? {}, d);
     }
-    return {
-      ok: true,
-      captures,
-      remaining: remaining > 0 ? this.url.slice(-remaining) : "",
-      data,
-    };
+    const { captures, rest } = this;
+    return rest
+      ? { ok: true, data, captures, rest }
+      : { ok: true, data, captures };
   }
 }
 
@@ -323,7 +360,8 @@ export type Router<
   /**
    * Register a handler with the router. When input is dispatched to
    * the router, the provided handler will be invoked iff the provided path
-   * is considered to be the best possible match to the input.
+   * matches the entire input, and is considered to be the best possible match
+   * to it.
    *
    * @param path will be matched against input that is provided via
    * `.dispatch()`
@@ -335,6 +373,34 @@ export type Router<
     Handler extends (KnownResult extends true
       ? RouteHandler<P, Result>
       : RouteHandler<P, any>),
+  >(
+    path: P,
+    handler: Handler,
+  ): Router<
+    KnownResult extends true ? Result : Result | ReturnType<Handler>,
+    KnownResult,
+    Exhaustive
+  >;
+
+  /**
+   * Register a prefix handler with the router: one that matches any input
+   * that starts with the provided path, including the path itself. The
+   * handler receives the rest of the input as decoded segments.
+   *
+   * When a route registered with `.on()` matches the same input, it is
+   * preferred over a prefix route; otherwise, whichever route matches the most
+   * input wins.
+   *
+   * @param path will be matched against the start of input that is provided
+   * via `.dispatch()`
+   * @param handler will be invoked iff the provided path is considered to be
+   * the best match.
+   */
+  onPrefix<
+    P extends Path,
+    Handler extends (KnownResult extends true
+      ? PrefixRouteHandler<P, Result>
+      : PrefixRouteHandler<P, any>),
   >(
     path: P,
     handler: Handler,
@@ -372,8 +438,7 @@ export type Router<
    * Matches all of this router's registered paths against the provided input string.
    *
    * If at least one registered path matches the input string, this method
-   * will determine the one registered path that best matches the input, using
-   * the strategy determined by the provided `comparator`.
+   * will determine the one registered path that best matches the input.
    *
    * Only the handler for the best matching path will be called. Its return value,
    * if any, will be returned from this method.
@@ -387,12 +452,8 @@ export type Router<
    * Otherwise, `null` will be returned.
    *
    * @param input The input string to match against registered paths
-   * @param opts Optional dispatch configuration to override router-level settings
    */
-  dispatch(
-    input: string,
-    opts?: DispatchOpts,
-  ): Exhaustive extends true ? Result : Result | null;
+  dispatch(input: string): Exhaustive extends true ? Result : Result | null;
 };
 
 /**
@@ -404,8 +465,9 @@ export type Router<
  * will be allowed to return any type of data; the router's `.dispatch()` method
  * will then indicate all of the possible types that could be returned.
  */
-export const router = <Result = never>(
-  opts?: RouterOpts,
-): Router<Result, [Result] extends [never] ? false : true> => {
-  return new RouterBuilder(opts);
+export const router = <Result = never>(): Router<
+  Result,
+  [Result] extends [never] ? false : true
+> => {
+  return new RouterBuilder();
 };

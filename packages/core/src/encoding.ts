@@ -9,8 +9,7 @@
  *
  * A literal `%` is protected through stage 1 by escaping `%25` as `%2525`, so
  * that it's only decoded once, by stage 2. That also makes `decodePath`
- * idempotent: the `remaining` input of a partial match is in the same form as
- * a path that was just decoded, and can be decoded again safely.
+ * idempotent.
  */
 
 const percentEscapes = /(?:%[0-9A-Fa-f]{2})+/g;
@@ -53,6 +52,27 @@ export const decodeSegment = (segment: string): string | null => {
   } catch {
     return null;
   }
+};
+
+/**
+ * Stage 2 for the input that a prefix match leaves behind: fully decode each
+ * of `parts`, starting at `from`, skipping empty parts. Returns `null` if any
+ * part contains invalid escapes.
+ */
+export const decodeRest = (
+  parts: string[],
+  from: number,
+  encoded: boolean,
+): string[] | null => {
+  const rest: string[] = [];
+  for (let i = from; i < parts.length; i++) {
+    const part = parts[i];
+    if (!part) continue;
+    const text = encoded ? decodeSegment(part) : part;
+    if (text === null) return null;
+    rest.push(text);
+  }
+  return rest;
 };
 
 // every character that `encodeURIComponent` would escape

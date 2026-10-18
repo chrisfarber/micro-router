@@ -20,7 +20,7 @@ export type {
 
 export type { LeadingSlash, StripLeadingSlash } from "./util";
 
-export { path, isExactMatch } from "./path";
+export { path } from "./path";
 export { dataSegment, optional } from "./segment";
 export {
   textSegments,
@@ -43,8 +43,9 @@ export { type Codec, codec, mapCodec } from "./codec";
 
 export {
   type Router,
-  type RouterOpts,
-  type DispatchOpts,
   type RouteHandler,
+  type RouteMatch,
+  type PrefixRouteHandler as PrefixHandler,
+  type PrefixMatch,
   router,
 } from "./router";

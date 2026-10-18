@@ -10,7 +10,7 @@ describe("number", () => {
       data: {
         price: 19.99,
       },
-      remaining: "/",
+      rest: [],
     });
 
     const desc: (typeof p)["repr"] = "/:price[number]";
@@ -37,7 +37,7 @@ describe("number", () => {
     for (const n of [0, 1, -1, 4.2, -0.5, 0.5, 1e21, -1e21, 1e-7, 2 ** 53]) {
       expect([n, p.match(p.make({ n }))]).toMatchObject([
         n,
-        { ok: true, data: { n }, remaining: "" },
+        { ok: true, data: { n }, rest: [] },
       ]);
     }
   });

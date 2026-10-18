@@ -234,6 +234,19 @@ describe("routeSwitch", () => {
     await expect.element(page.getByText("not found")).toBeVisible();
   });
 
+  it("falls back to a shorter match when an exact route has extra segments", async () => {
+    const Section = match(path("docs"), () => <h1>Docs section</h1>);
+    const Page = route(path("docs", "intro"), () => <h1>Intro</h1>);
+    const Routes = routeSwitch({
+      routes: [Section, Page],
+      fallback: <p>not found</p>,
+    });
+
+    // The exact route consumes more input, but doesn't match it all
+    const { page } = await renderWithNavigator(<Routes />, "/docs/intro/more");
+    await expect.element(page.getByText("Docs section")).toBeVisible();
+  });
+
   it("updates when navigation changes", async () => {
     const { page, navigator } = await renderWithNavigator(
       <App />,

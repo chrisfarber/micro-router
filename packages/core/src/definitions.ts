@@ -1,14 +1,35 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import type { Codec } from "./codec";
+import type { Prettify } from "./util";
+
+/** Paths that do not emit any data emit null */
 export type NoData = null;
-export type ValidData = NoData | Record<string, unknown> | string | number;
+/** Paths must emit data that's either null or a map of strings to data */
+export type ValidData = NoData | Record<string, unknown>;
+/** Merge two data; nulls are ignored */
+export type MergeData<L extends ValidData, R extends ValidData> = Prettify<
+  L extends null ? (R extends null ? null : R) : R extends null ? L : L & R
+>;
+/** Merge a set of data types */
+export type MergeDatas<Ds extends ValidData[]> = Ds extends []
+  ? null
+  : Ds extends [
+        infer D extends ValidData,
+        infer D2 extends ValidData,
+        ...infer Rest extends ValidData[],
+      ]
+    ? MergeDatas<[MergeData<D, D2>, ...Rest]>
+    : Ds[0];
 
 export interface Path<
   Pathname extends string = string,
   Data extends ValidData = any,
 > {
-  readonly path: Pathname;
+  readonly repr: Pathname;
+  readonly segments: Segment[];
+  readonly make: (data: Data) => string;
+  readonly match: (str: string) => MatchResult<Data>;
   readonly _data: Data;
 
   /**
@@ -31,45 +52,55 @@ export interface Path<
    * ```
    */
   readonly captures: number;
-
-  /**
-   * Attempts to match this path pattern against the input string.
-   *
-   * @param input - The URL path to match against
-   * @returns A MatchResult indicating success or failure with extracted data
-   */
-  match(input: string): MatchResult<Data>;
-
-  /**
-   * Generates a URL path from the provided data.
-   *
-   * @param data - The data to use for generating the path
-   * @returns The generated URL path string
-   */
-  make(data: Data): string;
 }
 
-export type DataOfPath<P extends Path> = P["_data"];
-export type ReadableRepresentationOfPath<P extends Path> = P["path"];
+interface SegmentBase<
+  Type extends string,
+  Repr extends string,
+  Data extends ValidData,
+  Optional extends boolean,
+> {
+  /**
+   * The type of the segment
+   */
+  readonly type: Type;
 
-export type MatchFailure = {
-  readonly ok: false;
-  readonly cause?: Error;
-};
-export type MatchSuccess<Data = any> = {
-  readonly ok: true;
-  readonly data: Data;
-  readonly remaining: string;
+  /**
+   * The number of dynamic data captures produced by this segment.
+   */
   readonly captures: number;
-};
-export type MatchResult<P = any> = MatchFailure | MatchSuccess<P>;
 
-export type MatchSuccessForPath<P extends Path> = MatchSuccess<DataOfPath<P>>;
+  readonly optional: Optional;
 
-export type StripLeadingSlash<S extends string> = S extends `/${infer R}`
-  ? StripLeadingSlash<R>
-  : S;
-export type LeadingSlash<S extends string> = `/${StripLeadingSlash<S>}`;
+  readonly repr: Repr;
+
+  _data: Data;
+}
+
+export interface TextSegment<
+  Text extends string,
+  Optional extends boolean,
+> extends SegmentBase<"text", Text, null, Optional> {
+  text: Text;
+  caseSensitive?: boolean;
+}
+
+export interface DataSegment<
+  Repr extends string,
+  Data extends ValidData,
+  Optional extends boolean,
+> extends SegmentBase<"data", Repr, Data, Optional> {
+  codec: Codec<Data>;
+}
+
+export type Segment<
+  Repr extends string = string,
+  T extends ValidData = any,
+  Optional extends boolean = any,
+> = TextSegment<Repr, Optional> | DataSegment<Repr, T, Optional>;
+
+export type DataOfPath<P extends Path> = P["_data"];
+export type ReadableRepresentationOfPath<P extends Path> = P["repr"];
 
 export type ConstPath<P extends string = string> = Path<P, NoData>;
 export type ParametricPath<
@@ -77,25 +108,18 @@ export type ParametricPath<
   Data extends Record<string, unknown> = Record<string, unknown>,
 > = Path<P, Data>;
 
+export type MatchFailure = { ok: false };
+export type MatchSuccess<D extends ValidData = ValidData> = {
+  ok: true;
+  data: D;
+  remaining: string;
+  captures: number;
+};
+export type MatchSuccessForPath<P extends Path> = MatchSuccess<DataOfPath<P>>;
+export type MatchResult<D extends ValidData = ValidData> =
+  | MatchFailure
+  | MatchSuccess<D>;
+export type MatchResultForPath<P extends Path> = MatchResult<DataOfPath<P>>;
+
 export type TypeIndicator<T extends string> = `[${T}]`;
 export type StringTypeIndicator = TypeIndicator<"string">;
-
-/* @__NO_SIDE_EFFECTS__ */
-export const makePath = <Pathname extends string, Data extends ValidData>(
-  path: Pathname,
-  match: (input: string) => MatchResult<Data>,
-  make: (data: Data) => string,
-  captures: number,
-): Path<Pathname, Data> => ({
-  _data: null as any,
-  path,
-  match,
-  make,
-  captures,
-});
-
-/* @__NO_SIDE_EFFECTS__ */
-export const makeFailure = (cause?: Error): MatchFailure => ({
-  ok: false,
-  cause,
-});

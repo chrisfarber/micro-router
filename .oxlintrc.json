@@ -4,7 +4,8 @@
     "correctness": "error"
   },
   "options": {
-    "typeAware": true
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
   },
   "env": {
     "builtin": true

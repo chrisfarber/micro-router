@@ -1,39 +1,44 @@
-import { segment } from "./segment";
-import { keyAs } from "./key-as";
-import { mapData } from "./map-data";
-import type { Path, TypeIndicator } from "./definitions";
-import { matchRegexp } from "./regexp";
+import { codec, type Codec } from "./codec";
+import { dataSegment } from "./segment";
+import type { DataSegment, TypeIndicator } from "./definitions";
+import { keyBy } from "./prism";
+import { type Keyed } from "./util";
+
+// Accepts every string that `Number.prototype.toString()` yields for a
+// finite number, e.g. "-4.2", ".5", or "1e+21".
+const numberRegexp = /^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
 
 /**
- * A path that succeeds if it can parse the beginning of the input as a base 10 number.
+ * A codec that parses an entire path segment as a finite base 10 number.
  *
- * Not greedy, unlike `matchString`. It is incompatible with leading slashes, however,
- * so you'll almost certainly want to wrap this in a segment or use the `number` Path.
+ * Encoding a non-finite number (`NaN` or `±Infinity`) throws.
  */
-/* @__NO_SIDE_EFFECTS__ */
-export const matchNumber: Path<TypeIndicator<"number">, number> = mapData(
-  matchRegexp({
-    path: "[number]" as const,
-    regexp: /^(\d*\.?\d+)(.*)$/,
-  }),
-  {
-    to(left) {
-      const num = Number(left);
-      if (isNaN(num)) {
-        throw new Error(`input parsed as NaN: "${left}"`);
-      }
-      return num;
-    },
-    from(right) {
-      return right.toString();
-    },
+export const matchNumber: Codec<number> = codec<number>(
+  text => {
+    if (!numberRegexp.test(text)) return { ok: false };
+    const data = Number(text);
+    if (!Number.isFinite(data)) return { ok: false };
+    return { ok: true, data };
+  },
+  data => {
+    if (!Number.isFinite(data)) {
+      throw new Error(
+        `number() cannot encode non-finite value: ${String(data)}`,
+      );
+    }
+    return data.toString();
   },
 );
 
 /**
- * A Path that will consume a path segment and parse it as a number, capturing it as the key `key`
+ * A path segment that will parse its contents as a number, capturing it as the key `key`
  * of Data.
  */
 /* @__NO_SIDE_EFFECTS__ */
-export const number = <K extends string>(key: K) =>
-  segment(keyAs(key, matchNumber));
+export const number = <K extends string>(
+  key: K,
+): DataSegment<`:${K}${TypeIndicator<"number">}`, Keyed<K, number>, false> =>
+  dataSegment({
+    repr: `:${key}[number]`,
+    codec: keyBy(key, matchNumber),
+  });

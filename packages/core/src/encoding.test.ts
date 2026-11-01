@@ -67,7 +67,7 @@ describe("percent-encoding in paths", () => {
       const made = File.make({ name });
       expect([name, File.match(made)]).toEqual([
         name,
-        { ok: true, data: { name }, rest: [], captures: 1 },
+        { ok: true, data: { name }, exact: true, rest: [], captures: 1 },
       ]);
     }
   });

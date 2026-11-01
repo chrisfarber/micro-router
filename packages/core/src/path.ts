@@ -173,6 +173,7 @@ const matchPath = <P extends Path>(
   return {
     ok: true,
     data,
+    exact: rest.length === 0,
     rest,
     captures: path.captures,
   };

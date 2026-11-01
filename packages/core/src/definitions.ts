@@ -112,9 +112,11 @@ export type MatchFailure = { ok: false };
 export type MatchSuccess<D extends ValidData = ValidData> = {
   ok: true;
   data: D;
+  /** Whether the path consumed the entire input, leaving `rest` empty. */
+  exact: boolean;
   /**
    * The decoded segments of the input that follow the matched path. Empty
-   * segments are skipped, so a match is exact when `rest` is empty.
+   * segments are skipped.
    */
   rest: string[];
   captures: number;

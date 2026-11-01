@@ -1,32 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { Codec } from "./codec";
-import type { DataOfPath, Path, ValidData } from "./definitions";
+import type {
+  MatchSuccess,
+  MatchSuccessForPath,
+  Path,
+  ValidData,
+} from "./definitions";
 import { decodePath, decodeRest, decodeSegment } from "./encoding";
 import type { DecodeResult } from "./prism";
 
-/** The match given to a handler registered with `.on()`. */
-export type RouteMatch<P extends Path = Path> = {
-  ok: true;
-  data: DataOfPath<P>;
-  captures: number;
-};
-
-/** The match given to a handler registered with `.onPrefix()`. */
-export type PrefixMatch<P extends Path = Path> = RouteMatch<P> & {
-  /**
-   * The decoded segments of the input that follow the path. Empty segments
-   * are skipped.
-   */
-  rest: string[];
-};
-
 export type RouteHandler<P extends Path = Path, R = unknown> = (
-  result: RouteMatch<P>,
-) => R;
-
-export type PrefixRouteHandler<P extends Path = Path, R = unknown> = (
-  result: PrefixMatch<P>,
+  result: MatchSuccessForPath<P>,
 ) => R;
 
 type AnyHandler = (result: any) => unknown;
@@ -186,7 +171,7 @@ const dispatchStatic = (
   const key = trailingSlash ? input.slice(0, -1) : input;
   const handler = routes.get(key);
   if (!handler) return notFound;
-  return handler({ ok: true, data: null, captures: 0 });
+  return handler({ ok: true, data: null, exact: true, rest: [], captures: 0 });
 };
 
 // When two routes consume the same input, an exact route beats a prefix route.
@@ -338,17 +323,21 @@ class Dispatcher {
   }
 
   /** The result for the best match. Only valid once `handler` is set. */
-  match(): RouteMatch | PrefixMatch {
+  match(): MatchSuccess {
     const matchData = this.matchData;
     let data: ValidData = null;
     for (let i = 0; i < matchData.length; i++) {
       const d = matchData[i];
       if (d) data = Object.assign(data ?? {}, d);
     }
-    const { captures, rest } = this;
-    return rest
-      ? { ok: true, data, captures, rest }
-      : { ok: true, data, captures };
+    const rest = this.rest ?? [];
+    return {
+      ok: true,
+      data,
+      exact: rest.length === 0,
+      rest,
+      captures: this.captures,
+    };
   }
 }
 
@@ -399,8 +388,8 @@ export type Router<
   onPrefix<
     P extends Path,
     Handler extends (KnownResult extends true
-      ? PrefixRouteHandler<P, Result>
-      : PrefixRouteHandler<P, any>),
+      ? RouteHandler<P, Result>
+      : RouteHandler<P, any>),
   >(
     path: P,
     handler: Handler,

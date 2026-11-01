@@ -41,11 +41,4 @@ export { type Prism, prism, mapPrism, identityPrism, keyBy } from "./prism";
 
 export { type Codec, codec, mapCodec } from "./codec";
 
-export {
-  type Router,
-  type RouteHandler,
-  type RouteMatch,
-  type PrefixRouteHandler as PrefixHandler,
-  type PrefixMatch,
-  router,
-} from "./router";
+export { type Router, type RouteHandler, router } from "./router";

@@ -27,6 +27,10 @@ There are some breaking changes:
   the input, decoded, as `rest: string[]`. Routes registered with `.on()` only
   match the entire input, and are preferred over a prefix route that matches the
   same input.
-- Match results report `rest: string[]` instead of `remaining: string`, and
-  `isExactMatch()` has been removed: a match is exact when `rest` is empty.
+- Match results report `exact: boolean` and `rest: string[]` instead of
+  `remaining: string`, and `isExactMatch()` has been removed. A match is exact
+  when it consumes the entire input, which leaves `rest` empty; that includes a
+  prefix route matching its own path.
+- Router handlers now receive a `MatchSuccess`, the same type that
+  `Path.match()` returns. The `RouteMatch` type has been removed.
 - The root path, `path()`, is now a prefix of every path, like any other path.

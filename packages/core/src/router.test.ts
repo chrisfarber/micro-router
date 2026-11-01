@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { codec } from "./codec";
-import type { Path, ValidData } from "./definitions";
+import type { MatchSuccess, Path } from "./definitions";
 import { path } from "./path";
 import { number } from "./number";
 import { regexp } from "./regexp";
-import { router, type RouteMatch } from "./router";
+import { router } from "./router";
 import { dataSegment } from "./segment";
 import { string } from "./string";
 import { textEnum, textSegments } from "./text";
-
-type Match = RouteMatch<Path<string, ValidData>>;
 
 describe("router", () => {
   describe(".dispatch()", () => {
@@ -231,47 +229,20 @@ describe("router", () => {
       expect(r.dispatch("/users/42")).toEqual("user");
       expect(r.dispatch("/users/42/settings")).toEqual("fallback");
     });
-
-    it("doesn't give exact routes a rest", () => {
-      const r = router()
-        .on(path("/users"), m => m)
-        .on(path(textSegments("Case", { caseSensitive: true })), m => m);
-
-      expect(r.dispatch("/users")).not.toHaveProperty("rest");
-      expect(r.dispatch("/Case")).not.toHaveProperty("rest");
-    });
-
-    it("types the rest only for prefix handlers", () => {
-      router()
-        .on(path("a"), m => {
-          // @ts-expect-error exact routes have no rest
-          const rest: unknown = m.rest;
-          return rest;
-        })
-        .onPrefix(path("b", string("id")), m => {
-          const rest: string[] = m.rest;
-          const id: string = m.data.id;
-          return [rest, id];
-        });
-    });
   });
 
   describe("match results passed to handlers", () => {
-    const pick = ({ data, captures }: Match) => ({ data, captures });
-    const pickRest = ({
-      data,
-      captures,
-      rest,
-    }: Match & { rest: string[] }) => ({
-      data,
-      captures,
-      rest,
-    });
+    const pick = ({ ok: _, ...match }: MatchSuccess) => match;
 
     it("reports no data for an exact static match", () => {
       const r = router().on(path("users"), pick);
 
-      expect(r.dispatch("/users")).toEqual({ data: null, captures: 0 });
+      expect(r.dispatch("/users")).toEqual({
+        data: null,
+        exact: true,
+        rest: [],
+        captures: 0,
+      });
     });
 
     it("collects data and captures from every level of the path", () => {
@@ -281,6 +252,8 @@ describe("router", () => {
 
       const expected = {
         data: { userId: "u1", postId: "p9" },
+        exact: true,
+        rest: [],
         captures: 2,
       };
       expect(r.dispatch("/users/u1/posts/p9")).toEqual(expected);
@@ -289,24 +262,36 @@ describe("router", () => {
 
     it("reports the rest and data for prefix matches", () => {
       const r = router()
-        .onPrefix(path("users", string("userId")), pickRest)
-        .onPrefix(path("users", string("userId"), "posts"), pickRest);
+        .onPrefix(path("users", string("userId")), pick)
+        .onPrefix(path("users", string("userId"), "posts"), pick);
 
       expect(r.dispatch("/users/u1/posts")).toEqual({
         data: { userId: "u1" },
         captures: 1,
+        exact: true,
         rest: [],
       });
       expect(r.dispatch("/users/u1/extra/bits")).toEqual({
         data: { userId: "u1" },
         captures: 1,
+        exact: false,
         rest: ["extra", "bits"],
       });
       expect(r.dispatch("/users/u1/posts/x/")).toEqual({
         data: { userId: "u1" },
         captures: 1,
+        exact: false,
         rest: ["x"],
       });
+    });
+
+    it("reports the same match as the path", () => {
+      const Users = path("users", string("id"));
+      const r = router().onPrefix(Users, m => m);
+
+      for (const input of ["/users/1", "/users/1/", "/users/1/posts"]) {
+        expect([input, r.dispatch(input)]).toEqual([input, Users.match(input)]);
+      }
     });
 
     it("does not merge data from a losing route into the winner", () => {
@@ -491,17 +476,6 @@ describe("router", () => {
   });
 
   describe("static routes", () => {
-    const pick = ({ data, captures }: Match) => ({ data, captures });
-    const pickRest = ({
-      data,
-      captures,
-      rest,
-    }: Match & { rest: string[] }) => ({
-      data,
-      captures,
-      rest,
-    });
-
     // Registering any case-sensitive text disables the static fast path, so a
     // router with this route always walks the trie.
     const NeverPath = path(
@@ -519,16 +493,16 @@ describe("router", () => {
 
     const routes = (trieOnly: boolean, prefixes: boolean) => {
       let r = router()
-        .on(path(), m => ["root", pick(m)])
-        .on(path("users"), m => ["users", pick(m)])
-        .on(path("users/all"), m => ["all", pick(m)])
-        .on(path("users", string("id")), m => ["id", pick(m)])
-        .on(path("static", star), m => ["star", pick(m)])
-        .on(path("static/index.html"), m => ["index", pick(m)]);
+        .on(path(), m => ["root", m])
+        .on(path("users"), m => ["users", m])
+        .on(path("users/all"), m => ["all", m])
+        .on(path("users", string("id")), m => ["id", m])
+        .on(path("static", star), m => ["star", m])
+        .on(path("static/index.html"), m => ["index", m]);
       if (prefixes) {
         r = r
-          .onPrefix(path(), m => ["root*", pickRest(m)])
-          .onPrefix(path("users"), m => ["users*", pickRest(m)]);
+          .onPrefix(path(), m => ["root*", m])
+          .onPrefix(path("users"), m => ["users*", m]);
       }
       return trieOnly ? r.on(NeverPath, () => ["never", null]) : r;
     };

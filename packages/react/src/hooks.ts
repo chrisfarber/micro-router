@@ -21,7 +21,7 @@ export const usePathMatch = <P extends Path>(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const [matches, data] = useMemo(() => {
     const match = path.match(loc.pathname);
-    if (!match.ok || (exact && match.rest.length > 0)) {
+    if (!match.ok || (exact && !match.exact)) {
       return [false, null];
     }
     return [true, match.data];

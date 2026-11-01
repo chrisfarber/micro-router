@@ -1,7 +1,7 @@
 import {
   type DataOfPath,
+  type MatchSuccessForPath,
   type Path,
-  type RouteMatch,
   router,
 } from "@micro-router/core";
 import { type FC, type ReactNode } from "react";
@@ -113,7 +113,9 @@ export type RouteSwitchOpts = {
 export const routeSwitch = ({ routes, fallback }: RouteSwitchOpts): FC => {
   const matcher = router<ReactNode>().default(() => fallback);
   for (const { path, exact, Matched } of routes) {
-    const render = ({ data }: RouteMatch) => <Matched {...data} />;
+    const render = ({ data }: MatchSuccessForPath<Path>) => (
+      <Matched {...data} />
+    );
     if (exact) {
       matcher.on(path, render);
     } else {

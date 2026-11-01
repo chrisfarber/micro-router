@@ -61,18 +61,21 @@ describe("Path.match()", () => {
     expect(p.match("/alpha/bravo")).toEqual({
       ok: true,
       data: null,
+      exact: true,
       rest: [],
       captures: 0,
     });
     expect(p.match("/alpha/bravo/")).toEqual({
       ok: true,
       data: null,
+      exact: true,
       rest: [],
       captures: 0,
     });
     expect(p.match("/alpha/bravo/charlie//delta/")).toEqual({
       ok: true,
       data: null,
+      exact: false,
       rest: ["charlie", "delta"],
       captures: 0,
     });
@@ -81,11 +84,16 @@ describe("Path.match()", () => {
 
   it("matches the root path", () => {
     const root = { ok: true, data: null, captures: 0 };
-    expect(path().match("/")).toEqual({ ...root, rest: [] });
-    expect(path().match("")).toEqual({ ...root, rest: [] });
-    expect(path().match("//")).toEqual({ ...root, rest: [] });
+    const exact = { ...root, exact: true, rest: [] };
+    expect(path().match("/")).toEqual(exact);
+    expect(path().match("")).toEqual(exact);
+    expect(path().match("//")).toEqual(exact);
     // like any other path, the root path is a prefix of longer input
-    expect(path().match("/foo")).toEqual({ ...root, rest: ["foo"] });
+    expect(path().match("/foo")).toEqual({
+      ...root,
+      exact: false,
+      rest: ["foo"],
+    });
   });
 
   it("extracts data", () => {
@@ -93,6 +101,7 @@ describe("Path.match()", () => {
     expect(p.match("/there/and/back")).toEqual({
       ok: true,
       data: { left: "there", right: "back" },
+      exact: true,
       rest: [],
       captures: 2,
     });
@@ -104,7 +113,7 @@ describe("make/match round trips", () => {
     const made = p.make(data);
     expect([made, p.match(made)]).toEqual([
       made,
-      { ok: true, data, rest: [], captures: p.captures },
+      { ok: true, data, exact: true, rest: [], captures: p.captures },
     ]);
     return made;
   };

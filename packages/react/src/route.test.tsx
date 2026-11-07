@@ -1,4 +1,13 @@
 import { number, path, string } from "@micro-router/core";
+import {
+  Component,
+  lazy,
+  memo,
+  type ErrorInfo,
+  type ReactNode,
+  Suspense,
+  useState,
+} from "react";
 import { describe, expect, it } from "vitest";
 import { match, route, routeSwitch } from "./route";
 import { renderWithNavigator } from "./test-helpers";
@@ -7,7 +16,7 @@ describe("route", () => {
   const UserPath = path("users", number("userId"));
 
   it("renders when the path is an exact match", async () => {
-    const UserPage = route(UserPath, ({ userId }) => {
+    const UserPage = route(UserPath, ({ data: { userId } }) => {
       return <h1>User {userId}</h1>;
     });
 
@@ -16,7 +25,7 @@ describe("route", () => {
   });
 
   it("does not render when the path is only a partial match", async () => {
-    const UserPage = route(UserPath, ({ userId }) => {
+    const UserPage = route(UserPath, ({ data: { userId } }) => {
       return <h1>User {userId}</h1>;
     });
 
@@ -30,7 +39,7 @@ describe("route", () => {
   });
 
   it("does not render when the path does not match", async () => {
-    const UserPage = route(UserPath, ({ userId }) => {
+    const UserPage = route(UserPath, ({ data: { userId } }) => {
       return <h1>User {userId}</h1>;
     });
 
@@ -42,7 +51,7 @@ describe("route", () => {
 
   it("passes captured params to the render function", async () => {
     const PostPath = path("posts", string("slug"), number("commentId"));
-    const PostPage = route(PostPath, ({ slug, commentId }) => {
+    const PostPage = route(PostPath, ({ data: { slug, commentId } }) => {
       return (
         <div>
           <span data-testid="slug">{slug}</span>
@@ -62,7 +71,7 @@ describe("route", () => {
   });
 
   it("updates when navigation changes", async () => {
-    const UserPage = route(UserPath, ({ userId }) => {
+    const UserPage = route(UserPath, ({ data: { userId } }) => {
       return <h1>User {userId}</h1>;
     });
 
@@ -80,7 +89,7 @@ describe("route", () => {
   });
 
   it("has correct properties", () => {
-    const UserPage = route(UserPath, ({ userId }) => {
+    const UserPage = route(UserPath, ({ data: { userId } }) => {
       return <h1>User {userId}</h1>;
     });
 
@@ -94,7 +103,7 @@ describe("match", () => {
   const BasePath = path("app", string("section"));
 
   it("renders when the path is an exact match", async () => {
-    const Section = match(BasePath, ({ section }) => {
+    const Section = match(BasePath, ({ data: { section } }) => {
       return <h1>Section: {section}</h1>;
     });
 
@@ -103,7 +112,7 @@ describe("match", () => {
   });
 
   it("renders when the path is a partial match", async () => {
-    const Section = match(BasePath, ({ section }) => {
+    const Section = match(BasePath, ({ data: { section } }) => {
       return <h1>Section: {section}</h1>;
     });
 
@@ -115,7 +124,7 @@ describe("match", () => {
   });
 
   it("does not render when the path does not match", async () => {
-    const Section = match(BasePath, ({ section }) => {
+    const Section = match(BasePath, ({ data: { section } }) => {
       return <h1>Section: {section}</h1>;
     });
 
@@ -126,7 +135,7 @@ describe("match", () => {
   });
 
   it("has correct properties", () => {
-    const Section = match(BasePath, ({ section }) => {
+    const Section = match(BasePath, ({ data: { section } }) => {
       return <h1>Section: {section}</h1>;
     });
 
@@ -141,10 +150,10 @@ describe("routeSwitch", () => {
   const EditMessagePath = path(MessageByIdPath, "edit");
   const OtherPath = path(MessageByIdPath, "something-else");
 
-  const MessagePage = route(MessageByIdPath, ({ messageId }) => {
+  const MessagePage = route(MessageByIdPath, ({ data: { messageId } }) => {
     return <h1>Viewing message {messageId}</h1>;
   });
-  const EditMessagePage = match(EditMessagePath, ({ messageId }) => {
+  const EditMessagePage = match(EditMessagePath, ({ data: { messageId } }) => {
     return <h1>Editing message {messageId}</h1>;
   });
   const OtherPage = route(OtherPath, () => {
@@ -275,7 +284,9 @@ describe("routeSwitch", () => {
     const GeneralPath = path("items", string("id"));
     const SpecificPath = path("items", "special");
 
-    const GeneralPage = match(GeneralPath, ({ id }) => <h1>Item: {id}</h1>);
+    const GeneralPage = match(GeneralPath, ({ data: { id } }) => (
+      <h1>Item: {id}</h1>
+    ));
     const SpecialPage = route(SpecificPath, () => <h1>Special Item</h1>);
 
     // General registered first, specific second
@@ -291,7 +302,9 @@ describe("routeSwitch", () => {
     const GeneralPath = path("items", string("id"));
     const SpecificPath = path("items", "special");
 
-    const GeneralPage = match(GeneralPath, ({ id }) => <h1>Item: {id}</h1>);
+    const GeneralPage = match(GeneralPath, ({ data: { id } }) => (
+      <h1>Item: {id}</h1>
+    ));
     const SpecialPage = route(SpecificPath, () => <h1>Special Item</h1>);
 
     // Specific registered first, general second
@@ -307,7 +320,7 @@ describe("routeSwitch", () => {
     const DynamicPath = path("api", string("version"));
     const StaticPath = path("api", "v1");
 
-    const DynamicRoute = route(DynamicPath, ({ version }) => (
+    const DynamicRoute = route(DynamicPath, ({ data: { version } }) => (
       <h1>Dynamic: {version}</h1>
     ));
     const StaticRoute = route(StaticPath, () => <h1>Static v1</h1>);
@@ -325,7 +338,7 @@ describe("routeSwitch", () => {
     const DynamicPath = path("api", string("version"));
     const StaticPath = path("api", "v1");
 
-    const DynamicRoute = match(DynamicPath, ({ version }) => (
+    const DynamicRoute = match(DynamicPath, ({ data: { version } }) => (
       <h1>Dynamic: {version}</h1>
     ));
     const StaticRoute = route(StaticPath, () => <h1>Static v1</h1>);
@@ -336,5 +349,191 @@ describe("routeSwitch", () => {
 
     const { page } = await renderWithNavigator(<Routes />, "/api/v2");
     await expect.element(page.getByText("Dynamic: v2")).toBeVisible();
+  });
+});
+
+describe("route data", () => {
+  const KeyPath = path("by-key", string("key"));
+  const RefPath = path("by-ref", string("ref"));
+
+  const KeyPage = route(KeyPath, ({ data: { key } }) => <h1>Key: {key}</h1>);
+  const RefPage = route(RefPath, ({ data: { ref } }) => <h1>Ref: {ref}</h1>);
+
+  it("passes data named after reserved props", async () => {
+    const { page } = await renderWithNavigator(<KeyPage />, "/by-key/abc");
+    await expect.element(page.getByText("Key: abc")).toBeVisible();
+
+    const other = await renderWithNavigator(<RefPage />, "/by-ref/def");
+    await expect.element(other.page.getByText("Ref: def")).toBeVisible();
+  });
+
+  it("passes data named after reserved props through a routeSwitch", async () => {
+    const Routes = routeSwitch({ routes: [KeyPage, RefPage] });
+
+    const { page, navigator } = await renderWithNavigator(
+      <Routes />,
+      "/by-key/abc",
+    );
+    await expect.element(page.getByText("Key: abc")).toBeVisible();
+
+    navigator.push("/by-ref/def");
+    await expect.element(page.getByText("Ref: def")).toBeVisible();
+  });
+
+  describe("for a path with no data", () => {
+    const Page = route(path("empty"), ({ data }) => (
+      <h1>Data: {JSON.stringify(data)}</h1>
+    ));
+
+    it("gives the component null", async () => {
+      const { page } = await renderWithNavigator(<Page />, "/empty");
+      await expect.element(page.getByText("Data: null")).toBeVisible();
+    });
+
+    it("gives the component null through a routeSwitch", async () => {
+      const Routes = routeSwitch({ routes: [Page] });
+
+      const { page } = await renderWithNavigator(<Routes />, "/empty");
+      await expect.element(page.getByText("Data: null")).toBeVisible();
+    });
+  });
+
+  it("renders Matched with a data prop", async () => {
+    const UserPage = route(
+      path("users", number("userId")),
+      ({ data: { userId } }) => <h1>User {userId}</h1>,
+    );
+
+    const { page } = await renderWithNavigator(
+      <UserPage.Matched data={{ userId: 7 }} />,
+    );
+    await expect.element(page.getByText("User 7")).toBeVisible();
+  });
+
+  it("keeps hooks and state separate between routes in a routeSwitch", async () => {
+    const Counter = route(path("counter"), () => {
+      const [count, setCount] = useState(0);
+      return (
+        <button
+          onClick={() => {
+            setCount(count + 1);
+          }}
+        >
+          Count: {count}
+        </button>
+      );
+    });
+    const Named = route(path("named"), () => {
+      const [first] = useState("Ada");
+      const [last] = useState("Lovelace");
+      return (
+        <h1>
+          {first} {last}
+        </h1>
+      );
+    });
+    const Routes = routeSwitch({ routes: [Counter, Named] });
+
+    const { page, navigator } = await renderWithNavigator(
+      <Routes />,
+      "/counter",
+    );
+    await page.getByText("Count: 0").click();
+    await expect.element(page.getByText("Count: 1")).toBeVisible();
+
+    navigator.push("/named");
+    await expect.element(page.getByText("Ada Lovelace")).toBeVisible();
+
+    navigator.push("/counter");
+    await expect.element(page.getByText("Count: 0")).toBeVisible();
+  });
+
+  it("supports memo components", async () => {
+    const UserPage = ({ data }: { data: { id: string } }) => (
+      <h1>Memo {data.id}</h1>
+    );
+    const Page = route(path("users", string("id")), memo(UserPage));
+    const Routes = routeSwitch({ routes: [Page] });
+
+    const { page } = await renderWithNavigator(<Page />, "/users/1");
+    await expect.element(page.getByText("Memo 1")).toBeVisible();
+
+    const other = await renderWithNavigator(<Routes />, "/users/2");
+    await expect.element(other.page.getByText("Memo 2")).toBeVisible();
+  });
+
+  it("supports lazy components", async () => {
+    const Page = route(
+      path("users", string("id")),
+      lazy(() =>
+        Promise.resolve({
+          default: ({ data }: { data: { id: string } }) => (
+            <h1>Lazy {data.id}</h1>
+          ),
+        }),
+      ),
+    );
+
+    const { page } = await renderWithNavigator(
+      <Suspense fallback={<p>loading</p>}>
+        <Page />
+      </Suspense>,
+      "/users/1",
+    );
+    await expect.element(page.getByText("Lazy 1")).toBeVisible();
+  });
+
+  it("supports class components", async () => {
+    class ClassPage extends Component<{ data: { id: string } }> {
+      override render() {
+        return <h1>Class {this.props.data.id}</h1>;
+      }
+    }
+    const Page = route(path("users", string("id")), ClassPage);
+
+    const { page } = await renderWithNavigator(<Page />, "/users/1");
+    await expect.element(page.getByText("Class 1")).toBeVisible();
+  });
+
+  it("keeps the component in the component stack", async () => {
+    let stack = "";
+    class Boundary extends Component<
+      { children: ReactNode },
+      { failed: boolean }
+    > {
+      override state = { failed: false };
+      static getDerivedStateFromError() {
+        return { failed: true };
+      }
+      override componentDidCatch(_: unknown, info: ErrorInfo) {
+        stack = info.componentStack ?? "";
+      }
+      override render() {
+        return this.state.failed ? <p>failed</p> : this.props.children;
+      }
+    }
+    const UserProfilePage = (): ReactNode => {
+      throw new Error("expected by this test");
+    };
+    const Page = route(path("profile"), UserProfilePage);
+
+    const { page } = await renderWithNavigator(
+      <Boundary>
+        <Page />
+      </Boundary>,
+      "/profile",
+    );
+    await expect.element(page.getByText("failed")).toBeVisible();
+    expect(stack).toContain("UserProfilePage");
+  });
+
+  it("rejects components that take the data as individual props", () => {
+    const UsersPath = path("users", string("id"));
+    const SpreadPage = ({ id }: { id: string }) => <h1>{id}</h1>;
+
+    // @ts-expect-error the data arrives in a single `data` prop
+    route(UsersPath, SpreadPage);
+    // @ts-expect-error the data arrives in a single `data` prop
+    match(UsersPath, memo(SpreadPage));
   });
 });

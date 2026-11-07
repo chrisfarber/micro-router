@@ -4,37 +4,42 @@ import {
   type Path,
   router,
 } from "@micro-router/core";
-import { type FC, type ReactNode } from "react";
+import { type ComponentType, type FC, type ReactNode } from "react";
 import { useLocation, usePathMatch } from "./hooks";
+
+/**
+ * A component that renders the content of a route. It receives the data
+ * parsed from the path via the `data` prop.
+ *
+ * @inline
+ */
+type DataComponent<P extends Path> = ComponentType<{ data: DataOfPath<P> }>;
 
 export type RouteComponent<P extends Path = Path> = {
   path: P;
   /**
-   * The inner component that will be rendered when the associated path matches.
+   * The component to render when the current URL matches the provided path
    */
-  Matched: FC<DataOfPath<P>>;
+  Matched: DataComponent<P>;
   exact: boolean;
 } & FC;
 
 type BuildRouteOpts<P extends Path> = {
   path: P;
-  render: FC<DataOfPath<P>>;
+  Matched: DataComponent<P>;
   exact: boolean;
 };
 
 /* @__NO_SIDE_EFFECTS__ */
 const buildRoute = <P extends Path>({
   path,
-  render,
+  Matched,
   exact,
 }: BuildRouteOpts<P>): RouteComponent<P> => {
-  const Matched: FC<DataOfPath<P>> = render;
-  Matched.displayName = `Matched: ${path.repr}`;
-
   const Outer: FC = () => {
-    const [match, params] = usePathMatch(path, { exact });
+    const [match, data] = usePathMatch(path, { exact });
     if (!match) return null;
-    return <Matched {...params} />;
+    return <Matched data={data} />;
   };
   Outer.displayName = `${exact ? "Route" : "Match"}: ${path.repr}`;
 
@@ -48,30 +53,34 @@ const buildRoute = <P extends Path>({
 /**
  * Build a route component for a path.
  *
- * The route component will only render its children when the provided path is
- * an exact match for the current path.
+ * The route component will only render `component` when the provided path is
+ * an exact match for the current path. `component` receives the path's data as
+ * its `data` prop. It can be any kind of component, including one made with
+ * `lazy()` or `memo()`.
  *
  * To decide between a list of route or match components, use `routeSwitch`.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const route = <P extends Path>(
   path: P,
-  render: FC<DataOfPath<P>>,
-): RouteComponent<P> => buildRoute({ path, render, exact: true });
+  component: DataComponent<P>,
+): RouteComponent<P> => buildRoute({ path, Matched: component, exact: true });
 
 /**
  * Build a match component for a path.
  *
- * The match component will only render its children when the provided path
+ * The match component will only render `component` when the provided path
  * matches the current URL, regardless of whether it's an exact match.
+ * `component` receives the path's data as its `data` prop. It can be any kind
+ * of component, including one made with `lazy()` or `memo()`.
  *
  * To decide between a list of route or match components, use `routeSwitch`.
  */
 /* @__NO_SIDE_EFFECTS__ */
 export const match = <P extends Path>(
   path: P,
-  render: FC<DataOfPath<P>>,
-): RouteComponent<P> => buildRoute({ path, render, exact: false });
+  component: DataComponent<P>,
+): RouteComponent<P> => buildRoute({ path, Matched: component, exact: false });
 
 /** @inline */
 export type RouteSwitchOpts = {
@@ -96,7 +105,7 @@ export type RouteSwitchOpts = {
  * const NotFound = () => <h1>404 Not Found</h1>;
  *
  * const AppRoutes = routeSwitch({
- *   of: [HomeRoute, AboutRoute],
+ *   routes: [HomeRoute, AboutRoute],
  *   fallback: <NotFound />
  * });
  *
@@ -114,7 +123,7 @@ export const routeSwitch = ({ routes, fallback }: RouteSwitchOpts): FC => {
   const matcher = router<ReactNode>().default(() => fallback);
   for (const { path, exact, Matched } of routes) {
     const render = ({ data }: MatchSuccessForPath<Path>) => (
-      <Matched {...data} />
+      <Matched data={data} />
     );
     if (exact) {
       matcher.on(path, render);

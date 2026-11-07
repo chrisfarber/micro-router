@@ -200,13 +200,13 @@ anchors).
 import { match, route, routeSwitch } from "@micro-router/react";
 import { ServicePath, ServiceVersionPath } from "./paths";
 
-const ServiceRoute = route(ServicePath, ({ serviceId }) => {
+const ServiceRoute = route(ServicePath, ({ data: { serviceId } }) => {
   return <h1>Viewing service {serviceId}</h1>;
 });
 
 const ServiceVersionRoute = route(
   ServiceVersionPath,
-  ({ serviceId, version }) => {
+  ({ data: { serviceId, version } }) => {
     return (
       <h1>
         Viewing version {version} for service {serviceId}
@@ -218,6 +218,17 @@ const ServiceVersionRoute = route(
 
 You can render these components anywhere you'd like, and they will only render
 their content when their paths match.
+
+The component you provide receives the path's data as its `data` prop, or `null`
+if the path has none. It can be any kind of component, so a route can load its
+page lazily, for example:
+
+```tsx
+const ServiceRoute = route(
+  ServicePath,
+  lazy(() => import("./service-page")),
+);
+```
 
 When building a real application, it's common to have multiple paths that could
 match a particular URL. Consider:

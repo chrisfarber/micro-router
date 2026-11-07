@@ -34,3 +34,9 @@ There are some breaking changes:
 - Router handlers now receive a `MatchSuccess`, the same type that
   `Path.match()` returns. The `RouteMatch` type has been removed.
 - The root path, `path()`, is now a prefix of every path, like any other path.
+- `route()` and `match()` now give their component the path's data as a single
+  `data` prop, instead of as individual props: `({ data }) => ...`. A path
+  without data passes `null`, not `{}`. Any kind of component works, including
+  `lazy()`, `memo()` and class components, and data can be named `key`.
+- `RouteComponent.Matched` is now the component that was given to `route()` or
+  `match()`.

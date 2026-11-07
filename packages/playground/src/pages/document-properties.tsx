@@ -9,7 +9,7 @@ import { useDocuments } from "../context/documents";
 
 export const DocumentPropertiesPage = route(
   DocumentPropertiesPath,
-  ({ documentId }) => {
+  ({ data: { documentId } }) => {
     const { getDocument, deleteDocument, archiveDocument, restoreDocument } =
       useDocuments();
     const navigator = useNavigator();

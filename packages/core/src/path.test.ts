@@ -55,6 +55,22 @@ describe("Path.make()", () => {
 });
 
 describe("Path.match()", () => {
+  it("can be destructured, and narrows on ok", () => {
+    const Users = path("users", string("id"));
+
+    const { ok, data, exact, rest } = Users.match("/users/1/extra");
+    if (!ok) throw new Error("expected a match");
+    const id: string = data.id;
+    const isExact: boolean = exact;
+    const remaining: string[] = rest;
+    expect([id, isExact, remaining]).toEqual(["1", false, ["extra"]]);
+
+    // a failure is still just { ok: false } at runtime
+    const failure = Users.match("/nope");
+    expect(failure).toEqual({ ok: false });
+    expect(failure.data).toBeUndefined();
+  });
+
   it("matches text", () => {
     const p = path("alpha", "bravo");
     expect(p.match("/alpha")).toEqual({ ok: false });

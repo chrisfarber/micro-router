@@ -153,6 +153,31 @@ describe("usePathMatch", () => {
     expect(hook.result.current).toEqual([true, { userId: 42 }]);
   });
 
+  it("keeps the same data across hash and query changes", async () => {
+    const navigator = memoryNavigator("/users/42");
+    const hook = await renderHook(() => usePathMatch(UserPath), {
+      wrapper: ({ children }) => (
+        <NavigatorProvider navigator={navigator}>{children}</NavigatorProvider>
+      ),
+    });
+    const [, first] = hook.result.current;
+
+    await hook.act(() => {
+      navigator.push("/users/42#comments");
+    });
+    expect(hook.result.current[1]).toBe(first);
+
+    await hook.act(() => {
+      navigator.push("/users/42?tab=posts");
+    });
+    expect(hook.result.current[1]).toBe(first);
+
+    await hook.act(() => {
+      navigator.push("/users/7");
+    });
+    expect(hook.result.current).toEqual([true, { userId: 7 }]);
+  });
+
   it("returns [true, data] for partial match by default", async () => {
     const navigator = memoryNavigator("/users/42/settings");
     const hook = await renderHook(() => usePathMatch(UserPath), {

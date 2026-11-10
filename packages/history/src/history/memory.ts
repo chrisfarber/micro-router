@@ -34,17 +34,14 @@ export class MemoryHistory implements History {
   }
 
   push(pathOrLoc: string | Location): void {
+    // like a browser, pushing after going back discards the forward entries
+    this.history.splice(this.index + 1);
     this.history.push(parsePathOrLoc(pathOrLoc));
-    this.index += 1;
+    this.index = this.history.length - 1;
   }
 
   replace(pathOrLoc: string | Location): void {
-    const loc = parsePathOrLoc(pathOrLoc);
-    if (this.history.length === 0) {
-      this.history.push(loc);
-    } else {
-      this.history[this.history.length - 1] = loc;
-    }
+    this.history[this.index] = parsePathOrLoc(pathOrLoc);
   }
 
   observe(): () => void {

@@ -56,4 +56,28 @@ describe("MemoryHistory", () => {
     history.go(10);
     expect(history.index).toBe(history.history.length - 1);
   });
+
+  it("should discard forward entries when pushing after going back", () => {
+    history.push("/foo");
+    history.push("/bar");
+    history.go(-1);
+    history.push("/baz");
+    expect(history.location.pathname).toBe("/baz");
+    expect(history.history.map(l => l.pathname)).toEqual(["/", "/foo", "/baz"]);
+    history.go(1);
+    expect(history.location.pathname).toBe("/baz");
+    history.go(-1);
+    expect(history.location.pathname).toBe("/foo");
+  });
+
+  it("should replace the current location after going back", () => {
+    history.push("/foo");
+    history.push("/bar");
+    history.go(-1);
+    history.replace("/baz");
+    expect(history.location.pathname).toBe("/baz");
+    expect(history.index).toBe(1);
+    history.go(1);
+    expect(history.location.pathname).toBe("/bar");
+  });
 });

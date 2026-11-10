@@ -2,6 +2,7 @@ import { number, path } from "@micro-router/core";
 import { describe, expect, it } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import { useLocation, usePathMatch } from "./hooks";
+import type { INavigator } from "./navigator";
 import { NavigatorProvider } from "./provider";
 import { memoryNavigator } from "./test-helpers";
 
@@ -52,6 +53,44 @@ describe("useLocation", () => {
       navigator.replace("/replaced");
     });
     expect(hook.result.current.pathname).toEqual("/replaced");
+  });
+});
+
+describe("useLocation with a custom navigator", () => {
+  it("works with any INavigator, not only the Navigator class", async () => {
+    const real = memoryNavigator("/initial");
+    const custom: INavigator = {
+      start: () => {
+        real.start();
+      },
+      stop: () => {
+        real.stop();
+      },
+      get location() {
+        return real.location;
+      },
+      listen: listener => real.listen(listener),
+      go: offset => {
+        real.go(offset);
+      },
+      push: (target: string) => {
+        real.push(target);
+      },
+      replace: (target: string) => {
+        real.replace(target);
+      },
+    };
+    const hook = await renderHook(() => useLocation(), {
+      wrapper: ({ children }) => (
+        <NavigatorProvider navigator={custom}>{children}</NavigatorProvider>
+      ),
+    });
+
+    expect(hook.result.current.pathname).toEqual("/initial");
+    await hook.act(() => {
+      custom.push("/next");
+    });
+    expect(hook.result.current.pathname).toEqual("/next");
   });
 });
 

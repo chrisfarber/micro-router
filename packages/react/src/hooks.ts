@@ -1,10 +1,9 @@
 import { useMemo, useSyncExternalStore } from "react";
-import type { Navigator } from "./navigator";
 import { useNavigator } from "./provider";
 import type { Path, DataOfPath } from "@micro-router/core";
 
 export const useLocation = () => {
-  const navigator: Navigator = useNavigator() as Navigator;
+  const navigator = useNavigator();
   return useSyncExternalStore(
     cb => navigator.listen(cb),
     () => navigator.location,

@@ -4,7 +4,7 @@ import {
   type Path,
   router,
 } from "@micro-router/core";
-import { type ComponentType, type FC, type ReactNode } from "react";
+import { type ComponentType, type FC, type ReactNode, useMemo } from "react";
 import { useLocation, usePathMatch } from "./hooks";
 
 /**
@@ -133,8 +133,8 @@ export const routeSwitch = ({ routes, fallback }: RouteSwitchOpts): FC => {
   }
 
   const RouteSwitch: FC = () => {
-    const loc = useLocation();
-    return matcher.dispatch(loc.pathname);
+    const { pathname } = useLocation();
+    return useMemo(() => matcher.dispatch(pathname), [pathname]);
   };
   RouteSwitch.displayName = `RouteSwitch of ${routes.length.toFixed(0)} routes`;
 

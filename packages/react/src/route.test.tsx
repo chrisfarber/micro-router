@@ -6,10 +6,12 @@ import {
   type ErrorInfo,
   type ReactNode,
   Suspense,
+  useEffect,
   useState,
 } from "react";
 import { describe, expect, it } from "vitest";
 import { match, route, routeSwitch } from "./route";
+import { useLocation } from "./hooks";
 import { renderWithNavigator } from "./test-helpers";
 
 describe("route", () => {
@@ -535,5 +537,111 @@ describe("route data", () => {
     route(UsersPath, SpreadPage);
     // @ts-expect-error the data arrives in a single `data` prop
     match(UsersPath, memo(SpreadPage));
+  });
+});
+
+describe("route data identity", () => {
+  const UserPath = path("users", string("id"));
+
+  const setup = () => {
+    const seen: unknown[] = [];
+    let effects = 0;
+    const UserPage = ({ data }: { data: { id: string } }) => {
+      seen.push(data);
+      useEffect(() => {
+        effects += 1;
+      }, [data]);
+      return <h1>User {data.id}</h1>;
+    };
+    return { seen, effects: () => effects, UserPage };
+  };
+
+  // Shows the whole location, so a test can wait for each navigation to render
+  // instead of letting React batch them together.
+  const LocationProbe = () => {
+    const { pathname, search, hash } = useLocation();
+    return <p>At {pathname + search + hash}</p>;
+  };
+
+  it("keeps the same data across hash and query changes", async () => {
+    const { seen, effects, UserPage } = setup();
+    const Page = route(UserPath, UserPage);
+
+    const { page, navigator } = await renderWithNavigator(
+      <>
+        <Page />
+        <LocationProbe />
+      </>,
+      "/users/1",
+    );
+    await expect.element(page.getByText("User 1")).toBeVisible();
+    for (const target of [
+      "/users/1#comments",
+      "/users/1?tab=posts",
+      "/users/2",
+    ]) {
+      navigator.push(target);
+      await expect.element(page.getByText(`At ${target}`)).toBeVisible();
+    }
+    await expect.element(page.getByText("User 2")).toBeVisible();
+
+    const ones = seen.filter(d => (d as { id: string }).id === "1");
+    expect(new Set(ones).size).toBe(1);
+    expect(effects()).toBe(2);
+  });
+
+  it("keeps the same data across hash and query changes in a routeSwitch", async () => {
+    const { seen, effects, UserPage } = setup();
+    const Routes = routeSwitch({ routes: [route(UserPath, UserPage)] });
+
+    const { page, navigator } = await renderWithNavigator(
+      <>
+        <Routes />
+        <LocationProbe />
+      </>,
+      "/users/1",
+    );
+    await expect.element(page.getByText("User 1")).toBeVisible();
+    for (const target of [
+      "/users/1#comments",
+      "/users/1?tab=posts",
+      "/users/2",
+    ]) {
+      navigator.push(target);
+      await expect.element(page.getByText(`At ${target}`)).toBeVisible();
+    }
+    await expect.element(page.getByText("User 2")).toBeVisible();
+
+    const ones = seen.filter(d => (d as { id: string }).id === "1");
+    expect(new Set(ones).size).toBe(1);
+    expect(effects()).toBe(2);
+  });
+
+  it("keeps the same data when a routeSwitch's parent re-renders", async () => {
+    const { seen, effects, UserPage } = setup();
+    const Routes = routeSwitch({ routes: [route(UserPath, UserPage)] });
+    const Parent = () => {
+      const [count, setCount] = useState(0);
+      return (
+        <div>
+          <button
+            onClick={() => {
+              setCount(count + 1);
+            }}
+          >
+            Parent {count}
+          </button>
+          <Routes />
+        </div>
+      );
+    };
+
+    const { page } = await renderWithNavigator(<Parent />, "/users/1");
+    await page.getByText("Parent 0").click();
+    await page.getByText("Parent 1").click();
+    await expect.element(page.getByText("Parent 2")).toBeVisible();
+
+    expect(new Set(seen).size).toBe(1);
+    expect(effects()).toBe(1);
   });
 });

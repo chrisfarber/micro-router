@@ -94,6 +94,51 @@ describe("useLocation with a custom navigator", () => {
   });
 });
 
+describe("useLocation subscriptions", () => {
+  it("subscribes once, not on every render", async () => {
+    const real = memoryNavigator("/initial");
+    let subscriptions = 0;
+    const counting: INavigator = {
+      start: () => {
+        real.start();
+      },
+      stop: () => {
+        real.stop();
+      },
+      get location() {
+        return real.location;
+      },
+      listen: listener => {
+        subscriptions += 1;
+        return real.listen(listener);
+      },
+      go: offset => {
+        real.go(offset);
+      },
+      push: (target: string) => {
+        real.push(target);
+      },
+      replace: (target: string) => {
+        real.replace(target);
+      },
+    };
+    const hook = await renderHook(() => useLocation(), {
+      wrapper: ({ children }) => (
+        <NavigatorProvider navigator={counting}>{children}</NavigatorProvider>
+      ),
+    });
+    const afterMount = subscriptions;
+
+    for (const target of ["/a", "/b", "/c"]) {
+      await hook.act(() => {
+        counting.push(target);
+      });
+      expect(hook.result.current.pathname).toEqual(target);
+    }
+    expect(subscriptions).toEqual(afterMount);
+  });
+});
+
 describe("usePathMatch", () => {
   const UserPath = path("users", number("userId"));
 

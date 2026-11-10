@@ -21,6 +21,11 @@ export interface INavigator {
 
   get location(): Location;
 
+  /**
+   * Subscribe to location changes. Returns a function that stops listening.
+   */
+  listen(listener: Listener): StopListening;
+
   go(offset: number): void;
 
   push(path: string | ConstPath): void;

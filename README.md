@@ -183,6 +183,12 @@ replace the current history entry instead of adding one. Clicks that the browser
 should handle itself, like links to another site, links with a `target` or
 `download`, and clicks with a modifier key held, are left alone.
 
+A link to the current page gets `aria-current="page"`, which screen readers
+announce, and which can be used to style the link. Only an exact match of the
+pathname counts. To mark a link some other way, for example a "Docs" link while
+the user is in any page of the docs, pass `aria-current` yourself, and it's used
+instead.
+
 ### Routing
 
 As for actually defining routes, there are three primary functions: `match()`,

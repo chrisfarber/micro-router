@@ -51,3 +51,5 @@ There are some breaking changes:
   `download` are now left to the browser. `useClientSideNavigation()` takes the
   same `{ to, data, replace }` object. The `LinkBaseProps`, `LinkDataProps` and
   `PathDataCanBeInlineLinkProps` types have been removed.
+- `<Link>` now sets `aria-current="page"` when it links to the current page, by
+  an exact match of the pathname, unless `aria-current` is given explicitly.

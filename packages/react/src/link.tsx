@@ -2,6 +2,7 @@ import { type DataOfPath, type Path } from "@micro-router/core";
 import {
   useCallback,
   useMemo,
+  useSyncExternalStore,
   type AnchorHTMLAttributes,
   type MouseEvent,
   type Ref,
@@ -91,8 +92,38 @@ export const useClientSideNavigation = <P extends Path | string>(
 };
 
 /**
+ * Whether `href`, built from `to`, is the current page. Only the pathname is
+ * compared, like routes. A path is matched against the location and rebuilt,
+ * so that case, trailing slashes and encoding don't matter.
+ *
+ * The snapshot is only this boolean, so a link re-renders when it becomes or
+ * stops being current, and not on every navigation.
+ */
+const useIsCurrent = (to: Path | string, href: string): boolean => {
+  const nav = useNavigator();
+  const subscribe = useCallback(
+    (onChange: () => void) => nav.listen(onChange),
+    [nav],
+  );
+  const isCurrent = useCallback(() => {
+    const { pathname } = nav.location;
+    if (typeof to === "string") {
+      const base = new URL(pathname, window.location.origin);
+      const url = new URL(to, base);
+      return url.origin === base.origin && url.pathname === base.pathname;
+    }
+    const match = to.match(pathname);
+    return match.ok && match.exact && to.make(match.data) === href;
+  }, [nav, to, href]);
+  return useSyncExternalStore(subscribe, isCurrent);
+};
+
+/**
  * Render an `<a>` tag that links to the provided path with client-side
  * navigation. It accepts any of the anchor's attributes, except for `href`.
+ *
+ * A link to the current page gets `aria-current="page"`, unless
+ * `aria-current` is given explicitly.
  *
  * A path with data requires its `data`, so that the URL can be built:
  *
@@ -104,13 +135,21 @@ export const useClientSideNavigation = <P extends Path | string>(
  * `e.preventDefault()`.
  */
 export const Link = <P extends Path | string>(props: LinkProps<P>) => {
-  const { to, data, replace, onClick, ...anchorProps } =
-    props as LinkProps<string> & { to: P; data?: DataOf<P> };
+  const {
+    to,
+    data,
+    replace,
+    onClick,
+    "aria-current": ariaCurrent,
+    ...anchorProps
+  } = props as LinkProps<string> & { to: P; data?: DataOf<P> };
   const navigation = useClientSideNavigation({ to, data, replace });
+  const current = useIsCurrent(to, navigation.href);
 
   return (
     <a
       {...anchorProps}
+      aria-current={ariaCurrent ?? (current ? "page" : undefined)}
       href={navigation.href}
       onClick={e => {
         onClick?.(e);

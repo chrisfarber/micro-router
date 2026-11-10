@@ -1,5 +1,5 @@
 import { number, path, string } from "@micro-router/core";
-import type { ReactNode } from "react";
+import { Profiler, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Link } from "./link";
 import { renderWithNavigator } from "./test-helpers";
@@ -342,6 +342,127 @@ describe("Link", () => {
 
       await userEvent.click(page.getByRole("link", { name: "Next" }));
       expect(navigator.location.pathname).toEqual("/start");
+    });
+  });
+
+  describe("aria-current", () => {
+    const UserPath = path("users", number("userId"));
+
+    const current = (
+      page: Awaited<ReturnType<typeof renderWithNavigator>>["page"],
+      name: string,
+    ) =>
+      page.getByRole("link", { name }).element().getAttribute("aria-current");
+
+    it("marks a link to the current page", async () => {
+      const { page, navigator } = await renderWithNavigator(
+        <>
+          <Link to="/about">About</Link>
+          <Link to="/contact">Contact</Link>
+        </>,
+        "/about",
+      );
+      expect(current(page, "About")).toBe("page");
+      expect(current(page, "Contact")).toBeNull();
+
+      navigator.push("/contact");
+      await expect
+        .element(page.getByRole("link", { name: "Contact" }))
+        .toHaveAttribute("aria-current", "page");
+      expect(current(page, "About")).toBeNull();
+    });
+
+    it("compares a path's data", async () => {
+      const { page } = await renderWithNavigator(
+        <>
+          <Link to={UserPath} data={{ userId: 1 }}>
+            One
+          </Link>
+          <Link to={UserPath} data={{ userId: 2 }}>
+            Two
+          </Link>
+        </>,
+        "/users/1",
+      );
+      expect(current(page, "One")).toBe("page");
+      expect(current(page, "Two")).toBeNull();
+    });
+
+    it("ignores case, trailing slashes, the query and the hash", async () => {
+      const { page } = await renderWithNavigator(
+        <Link to={UserPath} data={{ userId: 1 }}>
+          One
+        </Link>,
+        "/USERS/1/?tab=posts#top",
+      );
+      expect(current(page, "One")).toBe("page");
+    });
+
+    it("does not mark a link to a parent of the current page", async () => {
+      const { page } = await renderWithNavigator(
+        <>
+          <Link to={UserPath} data={{ userId: 1 }}>
+            One
+          </Link>
+          <Link to="/users">Users</Link>
+        </>,
+        "/users/1/posts",
+      );
+      expect(current(page, "One")).toBeNull();
+      expect(current(page, "Users")).toBeNull();
+    });
+
+    it("never marks a link to another origin", async () => {
+      const { page } = await renderWithNavigator(
+        <Link to="https://example.com/about">Elsewhere</Link>,
+        "/about",
+      );
+      expect(current(page, "Elsewhere")).toBeNull();
+    });
+
+    it("uses aria-current when it's given", async () => {
+      const { page } = await renderWithNavigator(
+        <>
+          <Link to="/docs" aria-current="true">
+            Section
+          </Link>
+          <Link to="/docs/intro" aria-current={false}>
+            Opted out
+          </Link>
+        </>,
+        "/docs/intro",
+      );
+      expect(current(page, "Section")).toBe("true");
+      expect(current(page, "Opted out")).toBe("false");
+    });
+
+    it("only re-renders when whether it's current changes", async () => {
+      let renders = 0;
+      const { page, navigator } = await renderWithNavigator(
+        <Profiler
+          id="link"
+          onRender={() => {
+            renders += 1;
+          }}
+        >
+          <Link to="/target">Target</Link>
+        </Profiler>,
+        "/start",
+      );
+      const afterMount = renders;
+
+      for (const target of ["/a", "/b", "/c"]) {
+        navigator.push(target);
+        await expect.poll(() => navigator.location.pathname).toBe(target);
+      }
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(renders).toBe(afterMount);
+
+      navigator.push("/target");
+      await expect
+        .element(page.getByRole("link", { name: "Target" }))
+        .toHaveAttribute("aria-current", "page");
+      expect(renders).toBe(afterMount + 1);
     });
   });
 

@@ -45,14 +45,14 @@ export const ViewDocumentPage = route(
           <div className="document-actions">
             <Link
               to={DocumentPropertiesPath}
-              documentId={documentId}
+              data={{ documentId: documentId }}
               className="button"
             >
               Properties
             </Link>
             <Link
               to={EditDocumentPath}
-              documentId={documentId}
+              data={{ documentId: documentId }}
               className="button"
             >
               Edit

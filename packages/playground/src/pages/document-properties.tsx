@@ -47,7 +47,7 @@ export const DocumentPropertiesPage = route(
         <div className="page-header">
           <Link
             to={ViewDocumentPath}
-            documentId={documentId}
+            data={{ documentId: documentId }}
             className="back-link"
           >
             &larr; Back to Document

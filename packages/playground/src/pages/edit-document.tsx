@@ -42,7 +42,7 @@ export const EditDocumentPage = route(
         <div className="page-header">
           <Link
             to={ViewDocumentPath}
-            documentId={documentId}
+            data={{ documentId: documentId }}
             className="back-link"
           >
             &larr; Back to Document
@@ -80,7 +80,7 @@ export const EditDocumentPage = route(
           <div className="form-actions">
             <Link
               to={ViewDocumentPath}
-              documentId={documentId}
+              data={{ documentId: documentId }}
               className="button"
             >
               Cancel

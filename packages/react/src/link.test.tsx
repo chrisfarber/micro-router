@@ -1,5 +1,6 @@
 import { number, path, string } from "@micro-router/core";
-import { describe, expect, it } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Link } from "./link";
 import { renderWithNavigator } from "./test-helpers";
 import { userEvent } from "vitest/browser";
@@ -29,9 +30,9 @@ describe("Link", () => {
   describe("with Path object", () => {
     const UserPath = path("users", number("userId"));
 
-    it("renders an anchor with href built from path and inline data", async () => {
+    it("renders an anchor with href built from path and data", async () => {
       const { page } = await renderWithNavigator(
-        <Link to={UserPath} userId={42}>
+        <Link to={UserPath} data={{ userId: 42 }}>
           User 42
         </Link>,
       );
@@ -44,7 +45,7 @@ describe("Link", () => {
       const PostPath = path("users", number("userId"), "posts", string("slug"));
 
       const { page } = await renderWithNavigator(
-        <Link to={PostPath} userId={5} slug="hello-world">
+        <Link to={PostPath} data={{ userId: 5, slug: "hello-world" }}>
           Post Link
         </Link>,
       );
@@ -59,7 +60,10 @@ describe("Link", () => {
       const ArticlePath = path("articles", string("category"), string("slug"));
 
       const { page } = await renderWithNavigator(
-        <Link to={ArticlePath} category="tech" slug="new-features">
+        <Link
+          to={ArticlePath}
+          data={{ category: "tech", slug: "new-features" }}
+        >
           Article
         </Link>,
       );
@@ -70,33 +74,23 @@ describe("Link", () => {
         .toHaveAttribute("href", "/articles/tech/new-features");
     });
 
-    it("accepts path data as an object instead of inline props", async () => {
-      const ArticlePath = path("articles", string("category"), string("slug"));
+    it("accepts data whose keys are also anchor attributes", async () => {
+      const ItemPath = path("items", string("id"), string("title"));
 
       const { page } = await renderWithNavigator(
-        <Link
-          to={ArticlePath}
-          data={{
-            category: "claude",
-            slug: "makes-interesting-test-data",
-          }}
-        >
-          Article
+        <Link to={ItemPath} data={{ id: "7", title: "notes" }} id="link-id">
+          Item
         </Link>,
       );
 
-      const link = page.getByRole("link", { name: "Article" });
-      await expect
-        .element(link)
-        .toHaveAttribute(
-          "href",
-          "/articles/claude/makes-interesting-test-data",
-        );
+      const link = page.getByRole("link", { name: "Item" });
+      await expect.element(link).toHaveAttribute("href", "/items/7/notes");
+      await expect.element(link).toHaveAttribute("id", "link-id");
     });
 
     it("handles numeric zero as a parameter", async () => {
       const { page } = await renderWithNavigator(
-        <Link to={UserPath} userId={0}>
+        <Link to={UserPath} data={{ userId: 0 }}>
           User Zero
         </Link>,
       );
@@ -180,16 +174,55 @@ describe("Link", () => {
       await expect.element(link).toHaveAttribute("data-custom", "value");
     });
 
-    it("does not forward path data props to the anchor", async () => {
-      const UserPath = path("users", number("userId"));
+    it("forwards any anchor attribute", async () => {
       const { page } = await renderWithNavigator(
-        <Link to={UserPath} userId={42} aria-label="User link">
-          User
+        <Link
+          to="/test"
+          id="link-id"
+          title="A title"
+          target="_self"
+          rel="nofollow"
+          style={{ color: "rgb(255, 0, 0)" }}
+        >
+          Any Attribute
         </Link>,
       );
-      const link = page.getByRole("link", { name: "User link" });
-      await expect.element(link).toHaveAttribute("href", "/users/42");
-      await expect.element(link).not.toHaveAttribute("userId");
+      const link = page.getByRole("link", { name: "Any Attribute" });
+      await expect.element(link).toHaveAttribute("id", "link-id");
+      await expect.element(link).toHaveAttribute("title", "A title");
+      await expect.element(link).toHaveAttribute("target", "_self");
+      await expect.element(link).toHaveAttribute("rel", "nofollow");
+      await expect.element(link).toHaveStyle({ color: "rgb(255, 0, 0)" });
+    });
+
+    it("gives a callback ref the anchor", async () => {
+      let anchor: HTMLAnchorElement | null = null;
+      await renderWithNavigator(
+        <Link
+          to="/test"
+          ref={el => {
+            anchor = el;
+          }}
+        >
+          Ref Link
+        </Link>,
+      );
+      expect(anchor).toBeInstanceOf(HTMLAnchorElement);
+    });
+
+    it("types path data as the data prop only", () => {
+      const UserPath = path("users", number("userId"));
+      // oxlint-disable-next-line no-unused-expressions
+      [
+        // @ts-expect-error path data is no longer given as inline props
+        <Link key="inline" to={UserPath} userId={42} />,
+        // @ts-expect-error a path with data requires the data prop
+        <Link key="missing" to={UserPath} />,
+        // @ts-expect-error data must match the path
+        <Link key="wrong" to={UserPath} data={{ userId: "42" }} />,
+        <Link key="ok" to={UserPath} data={{ userId: 42 }} />,
+        <Link key="none" to="/no-data" />,
+      ];
     });
   });
 
@@ -259,6 +292,149 @@ describe("Link", () => {
       // Navigate back once - should go directly to page-one, not to a duplicate page-two
       navigator.go(-1);
       await expect.poll(() => navigator.location.pathname).toEqual("/page-one");
+    });
+
+    it("replaces the current entry with the replace prop", async () => {
+      const { page, navigator } = await renderWithNavigator(
+        <Link to="/replaced" replace>
+          Replace
+        </Link>,
+        "/start",
+      );
+
+      await userEvent.click(page.getByRole("link", { name: "Replace" }));
+      expect(navigator.location.pathname).toEqual("/replaced");
+      navigator.go(-1);
+      expect(navigator.location.pathname).toEqual("/replaced");
+    });
+
+    it("calls onClick before navigating", async () => {
+      const calls: string[] = [];
+      const { page, navigator } = await renderWithNavigator(
+        <Link
+          to="/next"
+          onClick={() => {
+            calls.push(navigator.location.pathname);
+          }}
+        >
+          Next
+        </Link>,
+        "/start",
+      );
+
+      await userEvent.click(page.getByRole("link", { name: "Next" }));
+      expect(calls).toEqual(["/start"]);
+      expect(navigator.location.pathname).toEqual("/next");
+    });
+
+    it("does not navigate when onClick prevents the default", async () => {
+      const { page, navigator } = await renderWithNavigator(
+        <Link
+          to="/next"
+          onClick={e => {
+            e.preventDefault();
+          }}
+        >
+          Next
+        </Link>,
+        "/start",
+      );
+
+      await userEvent.click(page.getByRole("link", { name: "Next" }));
+      expect(navigator.location.pathname).toEqual("/start");
+    });
+  });
+
+  describe("clicks the browser should handle", () => {
+    // Records whether Link took over a click, then cancels the click so that
+    // the browser doesn't actually navigate away from the test page.
+    let intercepted: boolean[] = [];
+    const listener = (e: MouseEvent) => {
+      intercepted.push(e.defaultPrevented);
+      e.preventDefault();
+    };
+    beforeEach(() => {
+      intercepted = [];
+      window.addEventListener("click", listener);
+    });
+    afterEach(() => {
+      window.removeEventListener("click", listener);
+    });
+
+    const click = (anchor: HTMLAnchorElement, init: MouseEventInit = {}) => {
+      anchor.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          ...init,
+        }),
+      );
+    };
+
+    const renderLink = async (link: ReactNode) => {
+      const { page, navigator } = await renderWithNavigator(link, "/start");
+      const anchor = page.getByRole("link").element() as HTMLAnchorElement;
+      return { anchor, navigator };
+    };
+
+    it.each([
+      ["another origin", "https://example.com/"],
+      ["a protocol-relative url", "//cdn.example.com/file"],
+      ["a mailto link", "mailto:someone@example.com"],
+    ])("leaves links to %s alone", async (_, to) => {
+      const { anchor, navigator } = await renderLink(<Link to={to}>Out</Link>);
+
+      click(anchor);
+      expect(intercepted).toEqual([false]);
+      expect(navigator.location.pathname).toEqual("/start");
+    });
+
+    it("leaves links that open in another target alone", async () => {
+      const { anchor, navigator } = await renderLink(
+        <Link to="/next" target="_blank">
+          New tab
+        </Link>,
+      );
+
+      click(anchor);
+      expect(intercepted).toEqual([false]);
+      expect(navigator.location.pathname).toEqual("/start");
+    });
+
+    it("leaves download links alone", async () => {
+      const { anchor, navigator } = await renderLink(
+        <Link to="/file.txt" download>
+          Download
+        </Link>,
+      );
+
+      click(anchor);
+      expect(intercepted).toEqual([false]);
+      expect(navigator.location.pathname).toEqual("/start");
+    });
+
+    it.each(["metaKey", "ctrlKey", "shiftKey", "altKey"])(
+      "leaves clicks with %s alone",
+      async modifier => {
+        const { anchor, navigator } = await renderLink(
+          <Link to="/next">Next</Link>,
+        );
+
+        click(anchor, { [modifier]: true });
+        expect(intercepted).toEqual([false]);
+        expect(navigator.location.pathname).toEqual("/start");
+      },
+    );
+
+    it("still handles absolute urls on the same origin", async () => {
+      const { anchor, navigator } = await renderLink(
+        <Link to={`${window.location.origin}/next`}>Same origin</Link>,
+      );
+
+      click(anchor);
+      expect(intercepted).toEqual([true]);
+      expect(navigator.location.pathname).toEqual("/next");
     });
   });
 });

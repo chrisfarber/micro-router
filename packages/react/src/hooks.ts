@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useNavigator } from "./provider";
-import type { Path, DataOfPath } from "@micro-router/core";
+import type { MatchResultForPath, Path } from "@micro-router/core";
 
 export const useLocation = () => {
   const navigator = useNavigator();
@@ -12,19 +12,19 @@ export const useLocation = () => {
 };
 
 export type PathMatchOpts = { exact?: boolean };
+/**
+ * Match a path against the current location's pathname, like `path.match()`.
+ * With `exact`, a match that doesn't consume the entire pathname is reported
+ * as `{ ok: false }`.
+ */
 export const usePathMatch = <P extends Path>(
   path: P,
   opts?: PathMatchOpts,
-): [true, DataOfPath<P>] | [false, null] => {
+): MatchResultForPath<P> => {
   const { exact } = opts ?? {};
   const { pathname } = useLocation();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const [matches, data] = useMemo(() => {
+  return useMemo(() => {
     const match = path.match(pathname);
-    if (!match.ok || (exact && !match.exact)) {
-      return [false, null];
-    }
-    return [true, match.data];
+    return match.ok && exact && !match.exact ? { ok: false } : match;
   }, [pathname, path, exact]);
-  return [matches, data];
 };

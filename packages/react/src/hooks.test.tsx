@@ -142,7 +142,7 @@ describe("useLocation subscriptions", () => {
 describe("usePathMatch", () => {
   const UserPath = path("users", number("userId"));
 
-  it("returns [true, data] when path matches exactly", async () => {
+  it("returns the match when the path matches exactly", async () => {
     const navigator = memoryNavigator("/users/42");
     const hook = await renderHook(() => usePathMatch(UserPath), {
       wrapper: ({ children }) => (
@@ -150,35 +150,65 @@ describe("usePathMatch", () => {
       ),
     });
 
-    expect(hook.result.current).toEqual([true, { userId: 42 }]);
+    expect(hook.result.current).toEqual({
+      ok: true,
+      data: { userId: 42 },
+      exact: true,
+      rest: [],
+      captures: 1,
+    });
   });
 
-  it("keeps the same data across hash and query changes", async () => {
+  it("can be destructured", async () => {
+    const navigator = memoryNavigator("/users/42/settings");
+    const hook = await renderHook(
+      () => {
+        const { ok, data, rest } = usePathMatch(UserPath);
+        if (!ok) return null;
+        const userId: number = data.userId;
+        return { userId, rest };
+      },
+      {
+        wrapper: ({ children }) => (
+          <NavigatorProvider navigator={navigator}>
+            {children}
+          </NavigatorProvider>
+        ),
+      },
+    );
+
+    expect(hook.result.current).toEqual({ userId: 42, rest: ["settings"] });
+  });
+
+  it("keeps the same match across hash and query changes", async () => {
     const navigator = memoryNavigator("/users/42");
     const hook = await renderHook(() => usePathMatch(UserPath), {
       wrapper: ({ children }) => (
         <NavigatorProvider navigator={navigator}>{children}</NavigatorProvider>
       ),
     });
-    const [, first] = hook.result.current;
+    const first = hook.result.current;
 
     await hook.act(() => {
       navigator.push("/users/42#comments");
     });
-    expect(hook.result.current[1]).toBe(first);
+    expect(hook.result.current).toBe(first);
 
     await hook.act(() => {
       navigator.push("/users/42?tab=posts");
     });
-    expect(hook.result.current[1]).toBe(first);
+    expect(hook.result.current).toBe(first);
 
     await hook.act(() => {
       navigator.push("/users/7");
     });
-    expect(hook.result.current).toEqual([true, { userId: 7 }]);
+    expect(hook.result.current).toMatchObject({
+      ok: true,
+      data: { userId: 7 },
+    });
   });
 
-  it("returns [true, data] for partial match by default", async () => {
+  it("returns a partial match by default", async () => {
     const navigator = memoryNavigator("/users/42/settings");
     const hook = await renderHook(() => usePathMatch(UserPath), {
       wrapper: ({ children }) => (
@@ -186,10 +216,16 @@ describe("usePathMatch", () => {
       ),
     });
 
-    expect(hook.result.current).toEqual([true, { userId: 42 }]);
+    expect(hook.result.current).toEqual({
+      ok: true,
+      data: { userId: 42 },
+      exact: false,
+      rest: ["settings"],
+      captures: 1,
+    });
   });
 
-  it("returns [false, null] when path does not match", async () => {
+  it("returns { ok: false } when the path does not match", async () => {
     const navigator = memoryNavigator("/other/path");
     const hook = await renderHook(() => usePathMatch(UserPath), {
       wrapper: ({ children }) => (
@@ -197,10 +233,10 @@ describe("usePathMatch", () => {
       ),
     });
 
-    expect(hook.result.current).toEqual([false, null]);
+    expect(hook.result.current).toEqual({ ok: false });
   });
 
-  it("returns [false, null] for partial match when exact is true", async () => {
+  it("returns { ok: false } for a partial match when exact is true", async () => {
     const navigator = memoryNavigator("/users/42/settings");
     const hook = await renderHook(
       () => usePathMatch(UserPath, { exact: true }),
@@ -213,10 +249,10 @@ describe("usePathMatch", () => {
       },
     );
 
-    expect(hook.result.current).toEqual([false, null]);
+    expect(hook.result.current).toEqual({ ok: false });
   });
 
-  it("returns [true, data] for exact match when exact is true", async () => {
+  it("returns the match for an exact match when exact is true", async () => {
     const navigator = memoryNavigator("/users/42");
     const hook = await renderHook(
       () => usePathMatch(UserPath, { exact: true }),
@@ -229,7 +265,13 @@ describe("usePathMatch", () => {
       },
     );
 
-    expect(hook.result.current).toEqual([true, { userId: 42 }]);
+    expect(hook.result.current).toEqual({
+      ok: true,
+      data: { userId: 42 },
+      exact: true,
+      rest: [],
+      captures: 1,
+    });
   });
 
   it("updates when navigation occurs", async () => {
@@ -240,16 +282,22 @@ describe("usePathMatch", () => {
       ),
     });
 
-    expect(hook.result.current).toEqual([true, { userId: 1 }]);
+    expect(hook.result.current).toMatchObject({
+      ok: true,
+      data: { userId: 1 },
+    });
 
     await hook.act(() => {
       navigator.push("/users/999");
     });
-    expect(hook.result.current).toEqual([true, { userId: 999 }]);
+    expect(hook.result.current).toMatchObject({
+      ok: true,
+      data: { userId: 999 },
+    });
 
     await hook.act(() => {
       navigator.push("/other");
     });
-    expect(hook.result.current).toEqual([false, null]);
+    expect(hook.result.current).toEqual({ ok: false });
   });
 });

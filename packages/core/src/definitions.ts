@@ -108,7 +108,18 @@ export type ParametricPath<
   Data extends Record<string, unknown> = Record<string, unknown>,
 > = Path<P, Data>;
 
-export type MatchFailure = { ok: false };
+/**
+ * A failed match. At runtime this is only `{ ok: false }`; the other fields are
+ * declared so that a `MatchResult` can be destructured, with `ok` narrowing the
+ * fields of a `MatchSuccess`.
+ */
+export type MatchFailure = {
+  ok: false;
+  data?: never;
+  exact?: never;
+  rest?: never;
+  captures?: never;
+};
 export type MatchSuccess<D extends ValidData = ValidData> = {
   ok: true;
   data: D;

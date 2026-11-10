@@ -1,13 +1,15 @@
-import { useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useNavigator } from "./provider";
 import type { Path, DataOfPath } from "@micro-router/core";
 
 export const useLocation = () => {
   const navigator = useNavigator();
-  return useSyncExternalStore(
-    cb => navigator.listen(cb),
-    () => navigator.location,
+  // React resubscribes whenever this function changes, so keep it stable.
+  const subscribe = useCallback(
+    (onChange: () => void) => navigator.listen(onChange),
+    [navigator],
   );
+  return useSyncExternalStore(subscribe, () => navigator.location);
 };
 
 export type PathMatchOpts = { exact?: boolean };

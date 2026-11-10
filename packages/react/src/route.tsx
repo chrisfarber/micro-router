@@ -8,12 +8,29 @@ import { type ComponentType, type FC, type ReactNode, useMemo } from "react";
 import { useLocation, usePathMatch } from "./hooks";
 
 /**
- * A component that renders the content of a route. It receives the data
- * parsed from the path via the `data` prop.
+ * Generic over the data rather than the path, so that a route for a specific
+ * path can still be used where a route for any path is expected.
  *
  * @inline
  */
-type DataComponent<P extends Path> = ComponentType<{ data: DataOfPath<P> }>;
+type MatchProps<D> = {
+  /** The data parsed from the path, or `null` if the path has none. */
+  data: D;
+  /** Whether the path matched the entire pathname. Always true for `route()`. */
+  exact: boolean;
+  /** The segments of the pathname after the path. Always empty for `route()`. */
+  rest: string[];
+};
+
+/** The props that a route's component receives. */
+export type RouteProps<P extends Path = Path> = MatchProps<DataOfPath<P>>;
+
+/**
+ * A component that renders the content of a route. It receives `RouteProps`.
+ *
+ * @inline
+ */
+type DataComponent<P extends Path> = ComponentType<MatchProps<DataOfPath<P>>>;
 
 export type RouteComponent<P extends Path = Path> = {
   path: P;
@@ -37,9 +54,9 @@ const buildRoute = <P extends Path>({
   exact,
 }: BuildRouteOpts<P>): RouteComponent<P> => {
   const Outer: FC = () => {
-    const [match, data] = usePathMatch(path, { exact });
-    if (!match) return null;
-    return <Matched data={data} />;
+    const match = usePathMatch(path, { exact });
+    if (!match.ok) return null;
+    return <Matched data={match.data} exact={match.exact} rest={match.rest} />;
   };
   Outer.displayName = `${exact ? "Route" : "Match"}: ${path.repr}`;
 
@@ -54,9 +71,9 @@ const buildRoute = <P extends Path>({
  * Build a route component for a path.
  *
  * The route component will only render `component` when the provided path is
- * an exact match for the current path. `component` receives the path's data as
- * its `data` prop. It can be any kind of component, including one made with
- * `lazy()` or `memo()`.
+ * an exact match for the current path. `component` receives `RouteProps`: the
+ * path's data, and the details of the match. It can be any kind of component,
+ * including one made with `lazy()` or `memo()`.
  *
  * To decide between a list of route or match components, use `routeSwitch`.
  */
@@ -71,8 +88,9 @@ export const route = <P extends Path>(
  *
  * The match component will only render `component` when the provided path
  * matches the current URL, regardless of whether it's an exact match.
- * `component` receives the path's data as its `data` prop. It can be any kind
- * of component, including one made with `lazy()` or `memo()`.
+ * `component` receives `RouteProps`: the path's data, and the details of the
+ * match, including the `rest` of the pathname. It can be any kind of
+ * component, including one made with `lazy()` or `memo()`.
  *
  * To decide between a list of route or match components, use `routeSwitch`.
  */
@@ -122,8 +140,9 @@ export type RouteSwitchOpts = {
 export const routeSwitch = ({ routes, fallback }: RouteSwitchOpts): FC => {
   const matcher = router<ReactNode>().default(() => fallback);
   for (const { path, exact, Matched } of routes) {
-    const render = ({ data }: MatchSuccessForPath<Path>) => (
-      <Matched data={data} />
+    const render = ({ data, exact, rest }: MatchSuccessForPath<Path>) => (
+      // oxlint-disable-next-line typescript/no-unsafe-assignment
+      <Matched data={data} exact={exact} rest={rest} />
     );
     if (exact) {
       matcher.on(path, render);

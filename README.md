@@ -220,8 +220,11 @@ You can render these components anywhere you'd like, and they will only render
 their content when their paths match.
 
 The component you provide receives the path's data as its `data` prop, or `null`
-if the path has none. It can be any kind of component, so a route can load its
-page lazily, for example:
+if the path has none. It also receives `exact`, which says whether the path
+matched the entire URL, and `rest`, the segments of the URL that follow the
+path, which is useful for `match()` components. `RouteProps<typeof SomePath>`
+types these props. The component can be any kind of component, so a route can
+load its page lazily, for example:
 
 ```tsx
 const ServiceRoute = route(
@@ -297,8 +300,10 @@ package provides several hooks:
   `push(path, data)` or `replace(path, data)` for programmatic navigation.
 - `useLocation()` — subscribes to location changes and returns the current
   `{ pathname, search, hash }`.
-- `usePathMatch(path)` — returns match data if the given path matches the
-  current location
+- `usePathMatch(path, { exact })` — matches the path against the current
+  pathname, and returns the same result as `path.match()`. It can be
+  destructured: `const { ok, data, rest } = usePathMatch(path)`, where `ok`
+  narrows the other fields.
 
 ### Search Params and Hash
 

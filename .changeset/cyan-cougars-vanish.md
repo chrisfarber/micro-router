@@ -40,3 +40,7 @@ There are some breaking changes:
   `lazy()`, `memo()` and class components, and data can be named `key`.
 - `RouteComponent.Matched` is now the component that was given to `route()` or
   `match()`.
+- Route components also receive `exact` and `rest`, so a `match()` component can
+  see the rest of the pathname. `RouteProps<P>` types a route component's props.
+- `usePathMatch()` now returns the same `MatchResult` as `path.match()`, which
+  can be destructured, instead of a `[matched, data]` tuple.

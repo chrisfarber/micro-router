@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { describe, expect, it } from "vitest";
-import { match, route, routeSwitch } from "./route";
+import { match, route, routeSwitch, type RouteProps } from "./route";
 import { useLocation } from "./hooks";
 import { renderWithNavigator } from "./test-helpers";
 
@@ -400,14 +400,14 @@ describe("route data", () => {
     });
   });
 
-  it("renders Matched with a data prop", async () => {
+  it("renders Matched with route props", async () => {
     const UserPage = route(
       path("users", number("userId")),
       ({ data: { userId } }) => <h1>User {userId}</h1>,
     );
 
     const { page } = await renderWithNavigator(
-      <UserPage.Matched data={{ userId: 7 }} />,
+      <UserPage.Matched data={{ userId: 7 }} exact rest={[]} />,
     );
     await expect.element(page.getByText("User 7")).toBeVisible();
   });
@@ -486,12 +486,14 @@ describe("route data", () => {
   });
 
   it("supports class components", async () => {
-    class ClassPage extends Component<{ data: { id: string } }> {
+    const UsersPath = path("users", string("id"));
+    // unlike function components, class components must declare every prop
+    class ClassPage extends Component<RouteProps<typeof UsersPath>> {
       override render() {
         return <h1>Class {this.props.data.id}</h1>;
       }
     }
-    const Page = route(path("users", string("id")), ClassPage);
+    const Page = route(UsersPath, ClassPage);
 
     const { page } = await renderWithNavigator(<Page />, "/users/1");
     await expect.element(page.getByText("Class 1")).toBeVisible();
@@ -643,5 +645,66 @@ describe("route data identity", () => {
 
     expect(new Set(seen).size).toBe(1);
     expect(effects()).toBe(1);
+  });
+});
+
+describe("route match details", () => {
+  const FilesPath = path("files");
+  const Files = match(FilesPath, ({ exact, rest }) => (
+    <p>
+      Files {String(exact)} [{rest.join("/")}]
+    </p>
+  ));
+  const Exact = route(path("exact"), ({ exact, rest }) => (
+    <p>
+      Exact {String(exact)} [{rest.join("/")}]
+    </p>
+  ));
+
+  it("gives match() components exact and rest", async () => {
+    const { page, navigator } = await renderWithNavigator(
+      <Files />,
+      "/files/a/b",
+    );
+    await expect.element(page.getByText("Files false [a/b]")).toBeVisible();
+
+    navigator.push("/files");
+    await expect.element(page.getByText("Files true []")).toBeVisible();
+  });
+
+  it("gives match() components exact and rest in a routeSwitch", async () => {
+    const Routes = routeSwitch({ routes: [Files] });
+    const { page, navigator } = await renderWithNavigator(
+      <Routes />,
+      "/files/a/b",
+    );
+    await expect.element(page.getByText("Files false [a/b]")).toBeVisible();
+
+    navigator.push("/files");
+    await expect.element(page.getByText("Files true []")).toBeVisible();
+  });
+
+  it("gives route() components an exact match with no rest", async () => {
+    const { page } = await renderWithNavigator(<Exact />, "/exact");
+    await expect.element(page.getByText("Exact true []")).toBeVisible();
+  });
+
+  it("gives route() components an exact match with no rest in a routeSwitch", async () => {
+    const Routes = routeSwitch({ routes: [Exact] });
+    const { page } = await renderWithNavigator(<Routes />, "/exact/");
+    await expect.element(page.getByText("Exact true []")).toBeVisible();
+  });
+
+  it("types a component's props from its path with RouteProps", async () => {
+    const UserPath = path("users", string("id"));
+    const UserPage = ({ data, rest }: RouteProps<typeof UserPath>) => (
+      <p>
+        User {data.id} [{rest.join("/")}]
+      </p>
+    );
+    const User = match(UserPath, UserPage);
+
+    const { page } = await renderWithNavigator(<User />, "/users/1/posts");
+    await expect.element(page.getByText("User 1 [posts]")).toBeVisible();
   });
 });

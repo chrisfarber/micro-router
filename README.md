@@ -170,20 +170,18 @@ import { Link } from "@micro-router/react";
 /* ServicesPath has no data, so you aren't expected or allowed to provide any */
 <Link to={ServicesPath}>View Services</Link>;
 
-/* ServicePath needs a serviceId, so you can provide it like so: */
-<Link to={ServicePath} serviceId="123">
+/* ServicePath needs a serviceId, which goes in the data prop: */
+<Link to={ServicePath} data={{ serviceId: "123" }}>
   Service 123
-</Link>;
-/* Or, you can provide a single data prop: */
-<Link to={ServicePath} data={{ serviceId: "345" }}>
-  Service 345
 </Link>;
 ```
 
 Because we're extracting type information out of the path itself, it's not
-possible to misspell or forget any of a path's data. And if the path you're
-linking to has data that conflicts with the regular props of `<Link>`, you'll be
-required to provide them via the `data` prop.
+possible to misspell or forget any of a path's data. `<Link>` also accepts any
+of the attributes of an `<a>`, except for `href`, and a `replace` prop to
+replace the current history entry instead of adding one. Clicks that the browser
+should handle itself, like links to another site, links with a `target` or
+`download`, and clicks with a modifier key held, are left alone.
 
 ### Routing
 

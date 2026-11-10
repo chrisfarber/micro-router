@@ -48,14 +48,14 @@ export const HomePage = route(HomePath, () => {
         <div className="quick-links">
           <Link
             to={ViewDocumentPath}
-            documentId="getting-started"
+            data={{ documentId: "getting-started" }}
             className="quick-link"
           >
             Getting Started
           </Link>
           <Link
             to={ViewDocumentPath}
-            documentId="api-reference"
+            data={{ documentId: "api-reference" }}
             className="quick-link"
           >
             API Reference

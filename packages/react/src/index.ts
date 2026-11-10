@@ -9,10 +9,5 @@ export { useLocation, usePathMatch } from "./hooks";
 export type { RouteSwitchOpts, RouteComponent, RouteProps } from "./route";
 export { routeSwitch, route, match } from "./route";
 
-export type {
-  LinkProps,
-  LinkBaseProps,
-  LinkDataProps,
-  PathDataCanBeInlineLinkProps,
-} from "./link";
+export type { LinkProps, LinkTarget } from "./link";
 export { useClientSideNavigation, Link } from "./link";

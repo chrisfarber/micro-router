@@ -27,7 +27,7 @@ export const ArchivedDocumentsPage = route(ArchivedDocumentsPath, () => {
           {archivedDocuments.map(doc => (
             <li key={doc.id} className="document-item archived">
               <div className="document-info">
-                <Link to={ViewDocumentPath} documentId={doc.id}>
+                <Link to={ViewDocumentPath} data={{ documentId: doc.id }}>
                   <h3>{doc.title}</h3>
                   <p className="document-meta">
                     Archived {doc.updatedAt.toLocaleDateString()}

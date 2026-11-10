@@ -23,7 +23,7 @@ export const DocumentsPage = route(DocumentsPath, () => {
         <ul className="document-list">
           {activeDocuments.map(doc => (
             <li key={doc.id} className="document-item">
-              <Link to={ViewDocumentPath} documentId={doc.id}>
+              <Link to={ViewDocumentPath} data={{ documentId: doc.id }}>
                 <h3>{doc.title}</h3>
                 <p className="document-meta">
                   Updated {doc.updatedAt.toLocaleDateString()}

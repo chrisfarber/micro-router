@@ -44,3 +44,10 @@ There are some breaking changes:
   see the rest of the pathname. `RouteProps<P>` types a route component's props.
 - `usePathMatch()` now returns the same `MatchResult` as `path.match()`, which
   can be destructured, instead of a `[matched, data]` tuple.
+- `<Link>` takes a path's data only through its `data` prop, not as inline
+  props. In exchange, it accepts every attribute of an `<a>` except `href`,
+  including `onClick`, `target` and callback refs, and a new `replace` prop.
+  Links to other origins, `mailto:` links, and anchors with a `target` or
+  `download` are now left to the browser. `useClientSideNavigation()` takes the
+  same `{ to, data, replace }` object. The `LinkBaseProps`, `LinkDataProps` and
+  `PathDataCanBeInlineLinkProps` types have been removed.

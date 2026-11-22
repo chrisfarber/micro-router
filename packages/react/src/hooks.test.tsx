@@ -60,12 +60,6 @@ describe("useLocation with a custom navigator", () => {
   it("works with any INavigator, not only the Navigator class", async () => {
     const real = memoryNavigator("/initial");
     const custom: INavigator = {
-      start: () => {
-        real.start();
-      },
-      stop: () => {
-        real.stop();
-      },
       get location() {
         return real.location;
       },
@@ -99,12 +93,6 @@ describe("useLocation subscriptions", () => {
     const real = memoryNavigator("/initial");
     let subscriptions = 0;
     const counting: INavigator = {
-      start: () => {
-        real.start();
-      },
-      stop: () => {
-        real.stop();
-      },
       get location() {
         return real.location;
       },

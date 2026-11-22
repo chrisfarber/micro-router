@@ -2,7 +2,12 @@ import { number, path, string } from "@micro-router/core";
 import { Profiler, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Link } from "./link";
+import { useLocation } from "./hooks";
 import { renderWithNavigator } from "./test-helpers";
+import { Navigator } from "./navigator";
+import { NavigatorProvider } from "./provider";
+import { BrowserHistory } from "@micro-router/history";
+import { render } from "vitest-browser-react";
 import { userEvent } from "vitest/browser";
 
 describe("Link", () => {
@@ -548,6 +553,31 @@ describe("Link", () => {
       },
     );
 
+    it("handles links to a hash of the current page", async () => {
+      const before = window.location.href;
+      const { anchor, navigator } = await renderLink(
+        <Link to="#section">Section</Link>,
+      );
+
+      click(anchor);
+      expect(intercepted).toEqual([true]);
+      expect(navigator.location.pathname + navigator.location.hash).toEqual(
+        "/start#section",
+      );
+      expect(window.location.href).toEqual(before);
+    });
+
+    it("still handles links to a hash of another page", async () => {
+      const { anchor, navigator } = await renderLink(
+        <Link to="/next#section">Next</Link>,
+      );
+
+      click(anchor);
+      expect(intercepted).toEqual([true]);
+      expect(navigator.location.pathname).toEqual("/next");
+      expect(navigator.location.hash).toEqual("#section");
+    });
+
     it("still handles absolute urls on the same origin", async () => {
       const { anchor, navigator } = await renderLink(
         <Link to={`${window.location.origin}/next`}>Same origin</Link>,
@@ -556,6 +586,139 @@ describe("Link", () => {
       click(anchor);
       expect(intercepted).toEqual([true]);
       expect(navigator.location.pathname).toEqual("/next");
+    });
+  });
+
+  describe("with the browser's history", () => {
+    const original = window.location.href;
+    afterEach(() => {
+      window.history.replaceState(null, "", original);
+      window.scrollTo(0, 0);
+    });
+
+    const renderPage = async () => {
+      const navigator = new Navigator(new BrowserHistory());
+      const page = await render(
+        <NavigatorProvider navigator={navigator}>
+          <Link to="#section">Section</Link>
+          <div id="section" style={{ marginTop: "5000px" }}>
+            Target
+          </div>
+        </NavigatorProvider>,
+      );
+      const seen: string[] = [];
+      navigator.listen(l => {
+        seen.push(l.hash);
+      });
+      return { page, navigator, seen };
+    };
+    const targeted = () => document.querySelector(":target")?.id;
+
+    it("navigates to a hash natively, and notifies once", async () => {
+      const { page, navigator, seen } = await renderPage();
+      const entries = window.history.length;
+      let hashchanges = 0;
+      const onHashchange = () => {
+        hashchanges += 1;
+      };
+      window.addEventListener("hashchange", onHashchange);
+
+      try {
+        await userEvent.click(page.getByRole("link", { name: "Section" }));
+        await expect.poll(() => hashchanges).toBe(1);
+        expect(targeted()).toEqual("section");
+        expect(window.scrollY).toBeGreaterThan(0);
+        expect(window.history.length).toBe(entries + 1);
+        expect(navigator.location.hash).toEqual("#section");
+        expect(seen).toEqual(["#section"]);
+      } finally {
+        window.removeEventListener("hashchange", onHashchange);
+      }
+    });
+
+    it("scrolls to the hash again without adding an entry", async () => {
+      const { page, seen } = await renderPage();
+      const link = page.getByRole("link", { name: "Section" });
+
+      await userEvent.click(link);
+      await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+      const entries = window.history.length;
+
+      window.scrollTo(0, 0);
+      await userEvent.click(link);
+      await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+      expect(window.history.length).toBe(entries);
+      expect(seen).toEqual(["#section"]);
+    });
+
+    // These call the history directly, not the navigator, so that the page
+    // can only update if the browser reports the navigation through popstate.
+    const ShowHash = () => <p>Hash: {useLocation().hash}</p>;
+    const renderWithHash = async () => {
+      const navigator = new Navigator(new BrowserHistory());
+      const page = await render(
+        <NavigatorProvider navigator={navigator}>
+          <ShowHash />
+          <div id="section" style={{ marginTop: "5000px" }}>
+            Target
+          </div>
+        </NavigatorProvider>,
+      );
+      return { page, history: new BrowserHistory() };
+    };
+
+    it("updates the page after replacing with a hash", async () => {
+      const { page, history } = await renderWithHash();
+      const entries = window.history.length;
+
+      history.replace("#section");
+      await expect.element(page.getByText("Hash: #section")).toBeVisible();
+      expect(targeted()).toEqual("section");
+      expect(window.scrollY).toBeGreaterThan(0);
+      expect(window.history.length).toBe(entries);
+    });
+
+    it("updates the page after pushing a hash", async () => {
+      const { page, history } = await renderWithHash();
+      const entries = window.history.length;
+
+      history.push("#section");
+      await expect.element(page.getByText("Hash: #section")).toBeVisible();
+      expect(targeted()).toEqual("section");
+      expect(window.history.length).toBe(entries + 1);
+    });
+
+    it("replaces with a hash from a replace link", async () => {
+      const navigator = new Navigator(new BrowserHistory());
+      const page = await render(
+        <NavigatorProvider navigator={navigator}>
+          <Link to="#section" replace>
+            Section
+          </Link>
+          <div id="section" style={{ marginTop: "5000px" }}>
+            Target
+          </div>
+        </NavigatorProvider>,
+      );
+      const seen: string[] = [];
+      navigator.listen(l => {
+        seen.push(l.hash);
+      });
+      const entries = window.history.length;
+
+      await userEvent.click(page.getByRole("link", { name: "Section" }));
+      await expect.poll(targeted).toEqual("section");
+      expect(window.history.length).toBe(entries);
+      expect(navigator.location.hash).toEqual("#section");
+      expect(seen).toEqual(["#section"]);
+    });
+
+    it("navigates natively when pushed programmatically", async () => {
+      const { navigator } = await renderPage();
+
+      navigator.push("#section");
+      await expect.poll(targeted).toEqual("section");
+      expect(navigator.location.hash).toEqual("#section");
     });
   });
 });

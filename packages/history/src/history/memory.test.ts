@@ -80,4 +80,41 @@ describe("MemoryHistory", () => {
     history.go(1);
     expect(history.location.pathname).toBe("/bar");
   });
+
+  it("notifies observers when go changes the location", () => {
+    const seen: string[] = [];
+    const stop = history.observe(l => {
+      seen.push(l.pathname);
+    });
+    history.push("/foo");
+    history.replace("/bar");
+    expect(seen).toEqual([]);
+
+    history.go(-1);
+    history.go(-1); // already at the start: no change, no notification
+    history.go(1);
+    expect(seen).toEqual(["/", "/bar"]);
+
+    stop();
+    history.go(-1);
+    expect(seen).toEqual(["/", "/bar"]);
+  });
+
+  it("resolves relative paths against the current location", () => {
+    history.push("/users/1?tab=posts");
+    history.push("#top");
+    expect(history.location).toEqual({
+      pathname: "/users/1",
+      search: "?tab=posts",
+      hash: "#top",
+    });
+    history.push("2");
+    expect(history.location.pathname).toBe("/users/2");
+    history.replace("?tab=likes");
+    expect(history.location).toEqual({
+      pathname: "/users/2",
+      search: "?tab=likes",
+      hash: "",
+    });
+  });
 });

@@ -23,6 +23,8 @@
   },
   "devDependencies": {
     "@micro-router/core": "workspace:^",
+    "@vitest/browser-playwright": "catalog:",
+    "playwright": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

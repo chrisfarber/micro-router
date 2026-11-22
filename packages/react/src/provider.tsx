@@ -4,7 +4,6 @@ import {
   type FC,
   type PropsWithChildren,
   useContext,
-  useEffect,
   useMemo,
 } from "react";
 import { type INavigator, Navigator } from "./navigator";
@@ -29,7 +28,8 @@ export const useNavigator = (): INavigator => {
  * Provides a navigator via a react context.
  *
  * You may provide your own navigator. If you do not, a navigator will be
- * constructed for you using `BrowserHistory`.
+ * constructed for you using `BrowserHistory`. A navigator can be shared
+ * between providers, or used outside of react.
  */
 export const NavigatorProvider: FC<
   PropsWithChildren<{ navigator?: INavigator }>
@@ -38,12 +38,6 @@ export const NavigatorProvider: FC<
     () => navigator ?? new Navigator(new BrowserHistory()),
     [navigator],
   );
-  useEffect(() => {
-    nav.start();
-    return () => {
-      nav.stop();
-    };
-  }, [nav]);
   return (
     <NavigatorContext.Provider value={nav}>
       {children}

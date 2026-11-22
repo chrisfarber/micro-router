@@ -18,7 +18,12 @@ export interface Location {
  */
 export interface History {
   get location(): Location;
-  /** Subscribe to location updates. Returns a cancel fn that can be invoked to stop observing. */
+  /**
+   * Subscribe to location changes that this history didn't make: `go()`, and
+   * the user's own navigation, like the back button. Changes made by `push()`
+   * and `replace()` are not reported. Returns a cancel fn that can be invoked
+   * to stop observing.
+   */
   observe(handler: (location: Location) => void): () => void;
 
   go(idx: number): void;

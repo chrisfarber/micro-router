@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@micro-router/core": "workspace:^",
-    "hono": "^4.13.13",
+    "hono": "^4.13.22",
     "mitata": "^1.0.34"
   },
   "devDependencies": {

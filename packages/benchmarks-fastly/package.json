@@ -12,10 +12,10 @@
   "dependencies": {
     "@micro-router/benchmarks": "workspace:^",
     "@micro-router/core": "workspace:^",
-    "hono": "^4.13.13"
+    "hono": "^4.13.22"
   },
   "devDependencies": {
-    "@fastly/js-compute": "^3",
+    "@fastly/js-compute": "^4.4.0",
     "typescript": "catalog:"
   }
 }

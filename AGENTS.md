@@ -7,7 +7,7 @@ Its public npm packages are:
 
 - `@micro-router/core` - Core library for defining paths and building routers
   (no dependencies)
-- `@micro-router/history` - Browser history API abstraction (depends on core)
+- `@micro-router/history` - Browser history API abstraction (no dependencies)
 - `@micro-router/react` - React router implementation (depends on core +
   history)
 

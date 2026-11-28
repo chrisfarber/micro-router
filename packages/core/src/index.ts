@@ -21,7 +21,7 @@ export type {
 export type { LeadingSlash, StripLeadingSlash } from "./util";
 
 export { path } from "./path";
-export { dataSegment, optional } from "./segment";
+export { dataSegment } from "./segment";
 export {
   textSegments,
   textEnum,

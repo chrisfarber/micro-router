@@ -44,11 +44,11 @@ export interface Path<
    *
    * @example
    * ```typescript
-   * const static = path("/message/inbox");        // captures: 0
-   * const dynamic = path("/message", string("id")); // captures: 1
+   * const InboxPath = path("/message/inbox");        // captures: 0
+   * const MessagePath = path("/message", string("id")); // captures: 1
    *
-   * // Both match "/message/inbox", but static route should win
-   * // because it has fewer captures (more specific)
+   * // Both match "/message/inbox", but `InboxPath` should win
+   * // because it has fewer captures
    * ```
    */
   readonly captures: number;

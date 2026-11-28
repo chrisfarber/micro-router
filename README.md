@@ -1,7 +1,11 @@
 # micro-router
 
-A small, TypeScript-first routing library that supports React. Weighs in at ~4KB
-gzipped for the core path library, or ~8KB with the React integration.
+A small, TypeScript-first routing library that allows you to define the paths of
+your application as values. These values allow you to type-safely parse data
+from and construct path strings.
+
+You can use this router in any JS runtime, and React bindings are available for
+building web apps.
 
 ## Why?
 
@@ -21,13 +25,6 @@ But it's not without some downsides:
   if your data fails to validate.
 - It's another mini language to learn. Simple string params are easy, but syntax
   gets more complicated once you want to do things like introduce regexps.
-
-Additionally, popular contemporary routers have expanded their scope to include
-concerns like batch data loading, form-based actions, and the sometimes-optional
-imposition of an isomorphism between your application's routes and the
-organization of its code on the filesystem. There are for sure times when these
-features are worthwhile, but, they come at a cost of complexity, and,
-especially, bundle size.
 
 `micro-router` intentionally takes a different approach, and asks the questions:
 
@@ -87,16 +84,16 @@ ServiceVersionPath.make({ version: 101 });
 ```
 
 In addition to `string` and `number`, the core package provides `textEnum` for
-matching against a fixed set of options, `matchRegexp` for custom patterns, and
-combinators like `segment` and `concat` for more advanced use cases.
+matching against a fixed set of options, `regexp` for custom patterns, and
+`dataSegment()` for arbitrary parsing logic.
 
 One nice thing about routing with strings is that it's not ambiguous; when
 you're reading code that links to a route, you'll see (at least partially)
 reified path strings.
 
-Therefore, our DSL also preserves this context by rolling a human-readable
-representation into the type system itself. Whenever you hover over a Path, you
-will see this representation along with the type of its data.
+Therefore, micro-router's DSL also preserves this context by rolling a
+human-readable representation into the type system itself. Whenever you hover
+over a Path, you will see this representation along with the type of its data.
 
 ```ts
 // hover your mouse cursor over any reference to this:
@@ -109,17 +106,13 @@ const ServiceVersionPath: Path<
     version: number;
   }
 >;
-// (note that this is not some obscure type, consisting of things like
-// `Record<"serviceId", string> & Record<"version", number>`, and that the path
-// is a self-contained string. This makes quite a difference to readability.)
 ```
 
-The core module also contains a small DSL for building routers that can be used
-for either computing values and/or side-effects. It's not meant to be a full
-client-side router solution, but, rather to aid in the implementation of such a
-solution. It's also very convenient for those emergent needs when you need to
-interpret or select between paths in other situations, such as for generating
-modulepreloads in a microfrontend environment.
+The core module also provides a flexible, general-purpose router DSL. Routers
+can be used for either computing values and/or for side-effects, depending on
+your needs.
+
+Consider this example:
 
 ```ts
 import { router, path, textEnum } from "@micro-router/core";
@@ -151,6 +144,20 @@ knownApplications.dispatch("/config/v1/anywhere");
 knownApplications.dispatch("/somewhere/else");
 // => null
 ```
+
+Routers will choose the best matching path using this logic:
+
+1. The path that consumes the most segments of the string being dispatched will
+   be selected.
+2. Exact matches (`router.on()`) are preferred over prefix matches
+   (`router.onPrefix()`).
+3. If there are still multiple candidates, the one with fewest dynamic captures
+   is preferred. E.g., `path("users/list")` wins over
+   `path("users", string("userId"))`.
+
+Internally, the router builds a segment-based trie data structure as you add
+paths. Dispatch is therefore relatively performant, comparable to Hono's
+TrieRouter.
 
 ## Using from React
 
@@ -221,7 +228,7 @@ const ServiceVersionRoute = route(
 ```
 
 You can render these components anywhere you'd like, and they will only render
-their content when their paths match.
+their content when their paths match the current URL.
 
 The component you provide receives the path's data as its `data` prop, or `null`
 if the path has none. It also receives `exact`, which says whether the path
@@ -255,12 +262,7 @@ _one_ page has its content rendered, but also, we'd prefer for the _map_ path to
 match.
 
 We can use `routeSwitch()` to handle both of these. It will only render a single
-match, and, when there are multiple matches, it will compare them by
-considering:
-
-- Which path consumes the most of the current URL? (This is only relevant for
-  `match()` components, since they allow partial matches).
-- Which path has the _fewest_ dynamic captures?
+match, using the same logic as the core package's `router()`.
 
 ```tsx
 const AppRoutes = routeSwitch({

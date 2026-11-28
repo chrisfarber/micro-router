@@ -110,7 +110,7 @@ export type RouteSwitchOpts = {
  * list of Route or Match components.
  *
  * Unlike rendering multiple Match components that would each independently
- * check if they match, `routeSwitch` uses the router to intelligently select
+ * check if they match, `routeSwitch` uses the router to select
  * the single best match based on specificity and path depth. This ensures only
  * one route component is rendered at a time.
  *
